@@ -177,6 +177,74 @@ const EXTRA_ACHIEVEMENTS = {
     category: 'hidden',
     unlocked: false,
     check: (gs) => (gs.sessionCommands || 0) >= 50
+  },
+  // v2.4 additions -----------------------------------------------------
+  'completionist_v24': {
+    id: 'completionist_v24',
+    name: 'Completionist',
+    icon: '🌟',
+    desc: 'Complete every community quest in the loaded pack',
+    reward: '400 EXP',
+    category: 'collection',
+    unlocked: false,
+    check: (gs) => {
+      const total = (gs.questPackTotal || 0);
+      const done = (gs.questPackDone || 0);
+      return total > 0 && done >= total;
+    }
+  },
+  'speedrunner_v24': {
+    id: 'speedrunner_v24',
+    name: 'Speedrunner',
+    icon: '🏃',
+    desc: 'Reach level 5 within 15 minutes',
+    reward: '400 EXP',
+    category: 'speedrun',
+    unlocked: false,
+    check: (gs) => (gs.level || 1) >= 5 &&
+      (Date.now() - (gs.startTime || Date.now())) < 15 * 60 * 1000
+  },
+  'historian_v24': {
+    id: 'historian_v24',
+    name: 'Historian II',
+    icon: '🏺',
+    desc: 'Visit both the old library and the train station',
+    reward: '150 EXP',
+    category: 'exploration',
+    unlocked: false,
+    check: (gs) => (gs.visitedDirs || []).includes('/library')
+      && (gs.visitedDirs || []).includes('/station')
+  },
+  'pacifist': {
+    id: 'pacifist',
+    name: 'Pacifist',
+    icon: '🕊️',
+    desc: 'Win the game without ever dropping alignment below zero',
+    reward: '250 EXP',
+    category: 'puzzle',
+    unlocked: false,
+    check: (gs) => !!gs.masterUnlocked && (gs.minAlignment === undefined || gs.minAlignment >= 0)
+  },
+  'collector_v24': {
+    id: 'collector_v24',
+    name: 'Collector',
+    icon: '🧰',
+    desc: 'Hold at least one item from every category',
+    reward: '150 EXP',
+    category: 'collection',
+    unlocked: false,
+    check: (gs) => {
+      const inv = gs.inventory || [];
+      const has = { key: false, consumable: false, equipment: false, collectible: false };
+      // inline mini-classifier so this file has no cross-deps
+      for (const it of inv) {
+        if (/key|shard|fragment/i.test(it)) has.key = true;
+        else if (/potion|elixir/i.test(it)) has.consumable = true;
+        else if (/torch|sword|armor|detector/i.test(it)) has.equipment = true;
+        else has.collectible = true;
+      }
+      return has.key && has.consumable && has.equipment && has.collectible;
+    }
   }
 };
 

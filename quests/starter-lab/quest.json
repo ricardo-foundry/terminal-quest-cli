@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "starter-lab",
+  "title": "Starter Lab Tour",
+  "description": "Find the abandoned lab and listen to what the researcher has to say.",
+  "author": "Terminal Quest team",
+  "tags": ["intro", "tutorial", "lore"],
+  "steps": [
+    {
+      "id": "enter_lab",
+      "description": "Walk into /world/lab",
+      "triggers": [
+        { "type": "visitDir", "path": "/world/lab" }
+      ]
+    },
+    {
+      "id": "read_notice",
+      "description": "Read the faded notice on the wall",
+      "triggers": [
+        { "type": "visitFile", "path": "/world/lab/notice.txt" }
+      ]
+    },
+    {
+      "id": "read_research_log",
+      "description": "Open the researcher's notebook",
+      "triggers": [
+        { "type": "visitFile", "path": "/world/lab/research_log.txt" }
+      ]
+    },
+    {
+      "id": "level_check",
+      "description": "Reach level 2 before you leave",
+      "triggers": [
+        { "type": "level", "min": 2 }
+      ]
+    }
+  ],
+  "rewards": {
+    "exp": 120,
+    "items": ["lab-badge"]
+  },
+  "branches": {
+    "kind": {
+      "condition": "alignment >= 2",
+      "text": "The researcher smiles, genuinely. Badge pinned with a quiet thank-you."
+    },
+    "curious": {
+      "default": true,
+      "text": "You pocket the badge and head back to the surface."
+    }
+  }
+}

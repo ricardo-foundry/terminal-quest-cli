@@ -21,6 +21,8 @@ const { EXTRA_ACHIEVEMENTS, evaluateAutoUnlocks } = require('./achievements');
 const { CommandSystem } = require('./commands');
 const saveMod = require('./save');
 const timeMod = require('./time');
+const questsMod = require('./quests');
+const { ReplayRecorder } = require('./replay');
 const { t, setLocale, detectLocale } = require('./i18n');
 
 const DEFAULT_STATE = {
@@ -61,7 +63,13 @@ const DEFAULT_STATE = {
   logicSolved: false,
   morseSolved: false,
   aliases: { ll: 'ls -la', '.': 'look', l: 'ls', h: 'help', c: 'clear' },
-  commandHistory: []
+  commandHistory: [],
+  // v2.4 additions
+  replay: [],
+  minAlignment: 0,
+  questPackTotal: 0,
+  questPackDone: 0,
+  communityQuestState: {}
 };
 
 class TerminalGame {
@@ -84,9 +92,46 @@ class TerminalGame {
     this.syncAchievements();
     this.syncQuests();
 
+    // v2.4 additions: community quests + replay recorder
+    const loaded = questsMod.loadQuests();
+    this.communityQuests = loaded.quests;
+    this.questReport = loaded.report;
+    this.gameState.questPackTotal = this.communityQuests.length;
+    if (!this.gameState.communityQuestState || typeof this.gameState.communityQuestState !== 'object') {
+      this.gameState.communityQuestState = {};
+    }
+    this.replay = new ReplayRecorder(this.gameState);
+
     // apply persisted preferences
     if (this.gameState.locale) setLocale(this.gameState.locale);
     applyTheme(this.gameState.theme || 'dark');
+  }
+
+  /**
+   * Evaluate community quest progress; called from checkQuests().
+   */
+  evaluateCommunityQuests() {
+    if (!Array.isArray(this.communityQuests)) return;
+    let done = 0;
+    for (const q of this.communityQuests) {
+      const res = questsMod.evaluateQuest(q, this.gameState);
+      const prev = this.gameState.communityQuestState[q.id] || { done: false };
+      if (res.done && !prev.done) {
+        this.gameState.communityQuestState[q.id] = { done: true, branch: res.currentBranch || null };
+        if (q.rewards && typeof q.rewards.exp === 'number') {
+          this.addExp(q.rewards.exp, `community quest: ${q.id}`).catch(() => {});
+        }
+        if (q.rewards && Array.isArray(q.rewards.items)) {
+          for (const item of q.rewards.items) {
+            if (!this.gameState.inventory.includes(item)) {
+              this.gameState.inventory.push(item);
+            }
+          }
+        }
+      }
+      if ((this.gameState.communityQuestState[q.id] || {}).done) done++;
+    }
+    this.gameState.questPackDone = done;
   }
 
   // -------- Save / Load --------
@@ -344,6 +389,19 @@ class TerminalGame {
     if (this.gameState.foundMasterKey) {
       this.gameState.explorationLevel = Math.max(this.gameState.explorationLevel, 5);
     }
+    // v2.4: track min alignment seen so pacifist can tell.
+    // On first run (or post-load without the field) we seed to the current
+    // alignment rather than the default 0, otherwise a player whose
+    // alignment briefly rose to +2 would record min=0 instead of +2.
+    const cur = Number(this.gameState.alignment) || 0;
+    if (typeof this.gameState.minAlignment !== 'number' || this._minAlignInit !== true) {
+      this.gameState.minAlignment = cur;
+      this._minAlignInit = true;
+    } else if (cur < this.gameState.minAlignment) {
+      this.gameState.minAlignment = cur;
+    }
+    // v2.4: evaluate pluggable community quests (may grant rewards)
+    this.evaluateCommunityQuests();
     // evaluate automatic achievements (from the new extras pool)
     this.evaluateAutoAchievements().catch(() => {});
   }

@@ -218,8 +218,17 @@ class CommandSystem {
       sleep: () => this.cmdWait(args),
       look: () => this.cmdLook(),
       share: () => this.cmdShare(args),
-      time: () => this.cmdTime()
+      time: () => this.cmdTime(),
+      // v2.4 additions
+      replay: () => this.cmdReplay(args),
+      communityquests: () => this.cmdCommunityQuests(),
+      'community-quests': () => this.cmdCommunityQuests()
     };
+
+    // v2.4: record the command into the replay buffer if present
+    if (this.game.replay && typeof this.game.replay.record === 'function') {
+      this.game.replay.record('command', input);
+    }
 
     if (commands[cmd]) {
       await commands[cmd]();
@@ -547,13 +556,19 @@ Location: /home/user/.secret/
   // ---- games ----
   async cmdRun(args) {
     if (args.length === 0) {
-      console.log(colors.error('Usage: run <snake|guess|matrix|pong|wordle|qte|logic|morse>'));
+      console.log(colors.error('Usage: run <snake|guess|matrix|pong|wordle|qte|logic|morse|chess|cipher>'));
       return;
     }
     const name = args[0].toLowerCase();
-    const aliasMap = { logic: 'logicPuzzle' };
+    const aliasMap = {
+      logic: 'logicPuzzle',
+      chess: 'chessPuzzle',
+      cipher: 'cipherDecoder',
+      'chess-puzzle': 'chessPuzzle',
+      'cipher-decoder': 'cipherDecoder'
+    };
     const fnName = aliasMap[name] || name;
-    const valid = ['snake', 'guess', 'matrix', 'pong', 'wordle', 'qte', 'logicPuzzle', 'morse'];
+    const valid = ['snake', 'guess', 'matrix', 'pong', 'wordle', 'qte', 'logicPuzzle', 'morse', 'chessPuzzle', 'cipherDecoder'];
     if (!valid.includes(fnName)) {
       console.log(colors.error(`run: ${name}: game not found`));
       return;
@@ -1250,7 +1265,8 @@ Thank you for exploring.
       'status','inventory','inv','use','talk','map','quests','achievements',
       'unlock','hint','save','load','saves','theme','lang','version',
       'whoami','date','echo','sudo','alias','unalias','history','complete',
-      'wait','sleep','look','share','time'
+      'wait','sleep','look','share','time',
+      'replay','communityquests'
     ];
     for (const c of known) if (c.startsWith(prefix)) out.add(c);
     // aliases
@@ -1322,6 +1338,53 @@ Thank you for exploring.
     console.log(colors.dim(`v${pkg.version}  -  copy and paste the box above anywhere!`));
     console.log();
     await this.game.evaluateAutoAchievements();
+  }
+
+  async cmdReplay(args) {
+    const saveMod2 = require('./save');
+    const { loadReplayFromSlot, playReplay } = require('./replay');
+    const slot = (args[0] || this.game.slot || saveMod2.DEFAULT_SLOT).trim();
+    let events;
+    if (slot === this.game.slot) {
+      events = this.game.gameState.replay || [];
+    } else {
+      events = loadReplayFromSlot(slot, saveMod2);
+      if (events === null) {
+        console.log(colors.error(`replay: slot not found: ${slot}`));
+        return;
+      }
+    }
+    console.log(colors.dim(`replaying slot "${slot}" (${events.length} events)`));
+    await playReplay(events, {
+      delay: 20,
+      write: (line) => console.log(colors.dim(line))
+    });
+  }
+
+  cmdCommunityQuests() {
+    const list = this.game.communityQuests || [];
+    console.log();
+    console.log(colors.bold(`Community quests (${list.length})`));
+    console.log(colors.dim('-'.repeat(50)));
+    if (list.length === 0) {
+      console.log(colors.dim('(no quests loaded from ./quests/)'));
+      console.log();
+      return;
+    }
+    const questsMod = require('./quests');
+    for (const q of list) {
+      const res = questsMod.evaluateQuest(q, this.game.gameState);
+      const badge = res.done ? colors.success('[x]') : colors.warning(`[${res.completed}/${res.total}]`);
+      console.log(`${badge} ${colors.primary(q.id)}  ${q.title}`);
+      if (q.author) console.log(colors.dim(`     by ${q.author}`));
+      if (!res.done && res.activeStep) {
+        console.log(colors.dim(`     next: ${res.activeStep.description}`));
+      }
+      if (res.done && res.currentBranch && q.branches && q.branches[res.currentBranch]) {
+        console.log(colors.dim(`     ending: ${q.branches[res.currentBranch].text}`));
+      }
+    }
+    console.log();
   }
 
   historyUp() {

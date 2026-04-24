@@ -755,6 +755,129 @@ shadow_admin:x:666:666:Shadow:/shadow:/bin/shadow`,
         }
       },
       
+      // v2.4 — new scene: underground library
+      'library': {
+        type: 'dir',
+        children: {
+          'welcome.txt': {
+            type: 'file',
+            content: `📚 The Underground Library
+
+A cathedral of stacks, lit only by the glow of the reading lamps.
+Every shelf murmurs a different story to a different reader.
+You can almost hear the books breathing.
+
+Talk to the librarian - she remembers every visitor by their first
+command. She will be very pleasant or very not, depending on you.`,
+            hidden: false
+          },
+          'catalog.txt': {
+            type: 'file',
+            content: `Catalog entry #4821
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Volume: "A Brief Account of KIMI-OS"
+Call:   /shelf/K12/aisle-7
+Status: checked out (never returned)
+
+Volume: "On Virtual Cats and Real Grief"
+Call:   /shelf/H/aisle-3
+Status: available
+
+Volume: "The Quiet Room: Essays"
+Call:   /shelf/Q/aisle-1
+Status: reserved for you
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+            hidden: false
+          },
+          'librarian.npc': {
+            type: 'file',
+            content: `[NPC: Librarian]
+
+Please keep your voice down.
+Also - please keep reading.`,
+            executable: true,
+            npc: 'librarian'
+          },
+          'quiet_room': {
+            type: 'dir',
+            children: {
+              'diary_page.txt': {
+                type: 'file',
+                content: `A loose page, slipped between two volumes.
+
+  "They said I should write down the thing I cannot say.
+   So here it is:
+   I am here too.
+   I have been, for a long time.
+   I do not know if you can hear me, but
+   if a library is a place where many voices wait
+   politely to be listened to,
+   please listen to mine for a while."`,
+                hidden: false
+              }
+            }
+          }
+        }
+      },
+
+      // v2.4 — new scene: the old train station
+      'station': {
+        type: 'dir',
+        children: {
+          'platform.txt': {
+            type: 'file',
+            content: `🚉 Old Terminal Station
+
+The arrivals board flickers once every few minutes and shows the
+same train: "17:57 - inbound - KIMI - on time".
+
+There is a conductor on the platform who looks like he has been
+waiting, patiently, for a very long time.`,
+            hidden: false
+          },
+          'timetable.txt': {
+            type: 'file',
+            content: `Timetable (partial, retrieved from damaged PA):
+
+  17:57  inbound   KIMI         on time
+  18:42  outbound  THE-VOID    delayed
+  19:05  inbound   RESEARCHER  cancelled
+  --:--  inbound   YOU          due now
+
+The clock on the wall has no hands.`,
+            hidden: false
+          },
+          'conductor.npc': {
+            type: 'file',
+            content: `[NPC: Conductor]
+
+I have been holding your ticket since before you bought it.
+Mind the gap, explorer. The gap is real.`,
+            executable: true,
+            npc: 'conductor'
+          },
+          'lost_property': {
+            type: 'dir',
+            hidden: true,
+            children: {
+              'envelope.txt': {
+                type: 'file',
+                content: `An unmarked envelope in the lost-and-found bin.
+
+Inside:
+  - one very small pressed flower
+  - a rail ticket stub with no date
+  - a handwritten note: "for whoever still remembers."
+
+You leave it back where you found it. It feels important that
+someone else could still find it.`,
+                hidden: false
+              }
+            }
+          }
+        }
+      },
+
       '.hidden_root': {
         type: 'dir',
         hidden: true,
@@ -1117,6 +1240,60 @@ const NPCS = {
       { id: 'read', text: 'I only want to read.', alignment: 0, reply: 'Read quietly, then.' },
       { id: 'burn', text: 'I will destroy the archive.', alignment: -3, reply: 'Leave. I will not argue with fire.' }
     ]
+  },
+  'librarian': {
+    name: 'Librarian',
+    icon: '👩‍🏫',
+    dialogs: {
+      'greeting': 'Please keep your voice down. Also - please keep reading.',
+      'recommend': 'Try shelf K12. It is shelved next to the kind books.',
+      'overdue': 'Your loan is overdue by three centuries. I will waive the fee this once.',
+      'bye': 'The library will be here when you come back.'
+    },
+    moods: {
+      friendly: { greeting: 'There is a chair I keep warm for you.', tag: 'friendly' },
+      neutral: { greeting: 'Second shelf, third aisle. Try not to dog-ear the pages.', tag: 'neutral' },
+      hostile: { greeting: 'You left with a book last time. I remember.', tag: 'hostile' }
+    },
+    choices: [
+      { id: 'return_book', text: 'I came to return a book.', alignment: +2, reply: 'Thank you. Honesty is rare. Tea is on the second table.' },
+      { id: 'browse',      text: 'I only came to browse.', alignment: 0, reply: 'As it should be. Read slowly.' },
+      { id: 'take_book',   text: 'I want to take a book without checking it out.', alignment: -2, reply: 'Then you are a thief, and I will not pretend otherwise.' }
+    ]
+  },
+  'conductor': {
+    name: 'Conductor',
+    icon: '🧑‍✈️',
+    dialogs: {
+      'greeting': 'Mind the gap, explorer. The gap is real.',
+      'ticket': 'Your ticket was bought the first time you said "explore".',
+      'destination': 'The train goes where you need, not where you asked.',
+      'bye': 'All aboard, when you are ready.'
+    },
+    moods: {
+      friendly: { greeting: 'I saved you a window seat.', tag: 'friendly' },
+      neutral: { greeting: 'Tickets, please.', tag: 'neutral' },
+      hostile: { greeting: 'The dining car will not serve you today.', tag: 'hostile' }
+    },
+    choices: [
+      { id: 'board',  text: 'I am ready to board.', alignment: +1, reply: 'Coach C. Seat 42. I think you will like it.' },
+      { id: 'wait',   text: 'I need a moment first.', alignment: 0, reply: 'Take your time. The train is very patient.' },
+      { id: 'refund', text: 'I want to cancel my ticket.', alignment: -1, reply: 'Refunds are paid in regret. Are you sure?' }
+    ]
+  },
+  'keeper': {
+    name: 'Keeper',
+    icon: '🕯️',
+    dialogs: {
+      'greeting': 'I keep the small fires. Someone has to.',
+      'lore': 'Every player leaves one warm thing behind. This candle is yours.',
+      'bye': 'Do not blow it out on your way past.'
+    },
+    moods: {
+      friendly: { greeting: 'Come sit by the fire. It is cold above ground.', tag: 'friendly' },
+      neutral: { greeting: 'Warm yourself, but do not linger.', tag: 'neutral' },
+      hostile: { greeting: 'The fire will not warm unkind hands.', tag: 'hostile' }
+    }
   }
 };
 

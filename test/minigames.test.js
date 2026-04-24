@@ -106,3 +106,55 @@ test('MORSE_MAP covers A-Z and 0-9', () => {
 test('morseDecode returns empty string for empty input', () => {
   assert.equal(morseDecode(''), '');
 });
+
+// ---- v2.4: chess puzzle ----
+const {
+  CHESS_PUZZLES,
+  isChessMateSolution,
+  caesarEncode,
+  caesarDecode,
+  scoreCipherGuess,
+  CIPHER_DICT
+} = require('../src/minigames');
+
+test('CHESS_PUZZLES defines at least one puzzle with board + answer', () => {
+  assert.ok(Array.isArray(CHESS_PUZZLES));
+  assert.ok(CHESS_PUZZLES.length >= 1);
+  const p = CHESS_PUZZLES[0];
+  assert.ok(Array.isArray(p.board) && p.board.length > 0);
+  assert.ok(typeof p.answer === 'string' && p.answer.length > 0);
+});
+
+test('isChessMateSolution accepts canonical + forgiving forms', () => {
+  const p = CHESS_PUZZLES[0]; // answer is Rf8
+  assert.equal(isChessMateSolution(p, 'Rf8'), true);
+  assert.equal(isChessMateSolution(p, 'Rf8#'), true);
+  assert.equal(isChessMateSolution(p, 'rook f8'), true);
+  assert.equal(isChessMateSolution(p, 'f8'), true);
+  assert.equal(isChessMateSolution(p, 'Ke2'), false);
+  assert.equal(isChessMateSolution(p, ''), false);
+});
+
+// ---- v2.4: cipher decoder ----
+test('caesarEncode is round-trip safe via caesarDecode', () => {
+  const text = 'Hello KIMI';
+  for (let shift = 0; shift < 26; shift++) {
+    assert.equal(caesarDecode(caesarEncode(text, shift), shift), text, `shift=${shift}`);
+  }
+});
+
+test('caesarEncode preserves non-alpha characters', () => {
+  assert.equal(caesarEncode('abc 123!', 1), 'bcd 123!');
+});
+
+test('scoreCipherGuess scores plaintext by dictionary hits', () => {
+  const hi = scoreCipherGuess('the dawn is near');
+  const lo = scoreCipherGuess('zzz yyy xxx');
+  assert.ok(hi > lo);
+});
+
+test('CIPHER_DICT is a non-empty string array', () => {
+  assert.ok(Array.isArray(CIPHER_DICT));
+  assert.ok(CIPHER_DICT.length >= 5);
+  for (const w of CIPHER_DICT) assert.equal(typeof w, 'string');
+});

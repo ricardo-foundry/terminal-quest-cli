@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-04-25
+
+### Added (v2.4 quests & launch prep)
+- `src/quests.js` — pluggable JSON quest loader with a v1 schema
+  (`schemaVersion`, `id`, `title`, `steps[].triggers[]`, `rewards`,
+  `branches`).  Supports 9 trigger types including a sandboxed
+  `custom` predicate evaluator whose identifier set is whitelisted.
+- `quests/starter-lab/quest.json` and `quests/shadow-archive/quest.json` —
+  two official quests that exercise every trigger kind and include
+  alignment-branched endings.
+- `docs/QUEST_FORMAT.md` — full schema + contribution guide + example.
+- `src/cloud.js` — experimental `CloudBackend` abstract class with a
+  `GistBackend` reference implementation (GitHub Gist API, token via
+  `GH_TOKEN`, fetch override for tests) and an in-memory backend for
+  tests.  Exposed via new CLI flag `--cloud push/pull/list <slot>`.
+  Not wired into the main game loop.
+- `src/replay.js` — append-only replay recorder kept inside the save
+  envelope (`state.replay`).  Capped at 500 events.  Playable via the
+  in-game `replay [slot]` command or CLI `--replay <slot>`.  Uses
+  setTimeout-based pacing with a pluggable sleep function for tests.
+- 3 new NPCs: Librarian (`/library`), Conductor (`/station`), Keeper
+  (mood dialog only).  Each with friendly / neutral / hostile moods
+  and alignment-weighted choices where appropriate.
+- 2 new scenes: `/library` (underground library with a quiet room and
+  a loose diary page) and `/station` (old terminal station with a
+  timetable, a conductor and a lost-property envelope).
+- 5 new achievements: `completionist_v24`, `speedrunner_v24`,
+  `historian_v24`, `pacifist`, `collector_v24`.  All auto-evaluated.
+- 2 new minigames: `run chess` (mate-in-1 puzzle with forgiving input
+  parsing) and `run cipher` (Caesar-cipher decoder with a tiny
+  dictionary-based "looks like English" scorer).
+- CLI DX: `--list-quests` (prints every loaded quest + failures) and
+  `--validate-quest <path>` (exits non-zero on invalid JSON).  Help
+  text expanded to cover every new flag and in-game command.
+- `docs/CLOUD_SAVE.md`, `docs/LAUNCH_POST.md`, `docs/PRESS_KIT.md`,
+  `docs/TWEET_DRAFTS.md`, `docs/REDDIT_POST.md`, `docs/FAQ.md` —
+  launch-prep docs: English blog draft, 1-line / 1-para / 1-tweet
+  press kit, 5 tweet angles, 3 subreddit templates, 10-question FAQ.
+- `test/quests.test.js` (23 tests), `test/cloud.test.js` (9 tests),
+  `test/replay.test.js` (11 tests), plus new cases in
+  `test/minigames.test.js`, `test/achievements.test.js` and
+  `test/game.test.js`.  Total test count 112 -> 171.
+
+### Changed
+- `src/game.js` now loads community quests at construction time and
+  evaluates them every `checkQuests()` cycle, awarding exp/items on
+  first completion.  A running `minAlignment` is tracked so the
+  pacifist achievement can look backward.
+- `src/commands.js` records every executed command into the replay
+  buffer and exposes `replay` / `communityquests` in-game commands.
+- `package.json` bumps to `2.4.0` and ships `quests/` in the tarball.
+- No new runtime dependencies.
+
+### Fixed
+- Quest folder name / quest id mismatches are surfaced in
+  `--list-quests` output rather than silently skipped.
+- `replay` playback uses a pluggable sleep function so tests are
+  fully deterministic — we no longer rely on real wall-clock timers.
+
 ## [2.3.0] - 2026-04-25
 
 ### Added (v2.3 robustness + cross-platform)
@@ -183,7 +242,9 @@ testable `src/` module tree and ships a real `bin/` CLI.
 - Hidden-file discovery mechanic.
 - Early achievement prototype.
 
-[Unreleased]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v2.3.0...v2.4.0
+[2.3.0]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v2.0.0...v2.2.0
 [2.0.0]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/Ricardo-M-L/terminal-quest-cli/releases/tag/v1.0.0

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "id": "shadow-archive",
+  "title": "The Shadow Archive",
+  "description": "Descend into /shadow/archive, decode the cipher and decide the ledger's fate.",
+  "author": "Terminal Quest team",
+  "tags": ["mid-game", "lore", "choice"],
+  "steps": [
+    {
+      "id": "find_archive",
+      "description": "Find the underground archive",
+      "triggers": [
+        { "type": "visitDir", "path": "/shadow/archive" }
+      ]
+    },
+    {
+      "id": "read_ledger",
+      "description": "Read the archive ledger",
+      "triggers": [
+        { "type": "visitFile", "path": "/shadow/archive/ledger.txt" }
+      ]
+    },
+    {
+      "id": "decode_cipher",
+      "description": "Decode cipher.enc",
+      "triggers": [
+        { "type": "decodeFile", "file": "cipher.enc" }
+      ]
+    },
+    {
+      "id": "level_gate",
+      "description": "Be at least level 4",
+      "triggers": [
+        { "type": "custom", "predicate": "level >= 4" }
+      ]
+    }
+  ],
+  "rewards": {
+    "exp": 220,
+    "items": ["rare-stamp"]
+  },
+  "branches": {
+    "restore": {
+      "condition": "alignment >= 3",
+      "text": "You help the archivist rebind the pages. The archive lives."
+    },
+    "destroy": {
+      "condition": "alignment <= -3",
+      "text": "You burn the ledger. The archivist does not follow you out."
+    },
+    "neutral": {
+      "default": true,
+      "text": "You read, nod, and leave everything as you found it."
+    }
+  }
+}

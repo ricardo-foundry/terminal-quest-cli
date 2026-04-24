@@ -761,9 +761,213 @@ async function morse(game) {
   });
 }
 
+// --- Chess puzzle (mate-in-1, pure helpers + tiny REPL) ---
+// The puzzle is a fixed, well-known mate-in-1 with a single unique answer.
+// We store only the solution move + a human-readable board for printing.
+const CHESS_PUZZLES = [
+  {
+    board: [
+      '  a b c d e f g h',
+      '8 . . . . . . . k',
+      '7 . . . . . . p p',
+      '6 . . . . . . . .',
+      '5 . . . . . . . .',
+      '4 . . . . . . . .',
+      '3 . . . . . . . .',
+      '2 . . . . . . P P',
+      '1 . . . . . R . K'
+    ],
+    // white to move, mate in 1: Rf8#
+    answer: 'Rf8',
+    hint: 'rook lift along the f-file'
+  }
+];
+
+function isChessMateSolution(puzzle, answer) {
+  if (!puzzle || typeof answer !== 'string') return false;
+  // normalise: strip '#'/'+' suffixes and compare case-insensitive on the
+  // piece letter, case-sensitive on the file/rank coords.
+  const clean = (s) => s.replace(/[#+x]/g, '').trim();
+  const a = clean(answer);
+  const b = clean(puzzle.answer);
+  if (a === b) return true;
+  // accept "R f8" / "rook f8" / "f8" (the only rook move to f8 in puzzle)
+  const lowered = a.toLowerCase();
+  if (lowered.endsWith(b.slice(1).toLowerCase())) return true;
+  if (lowered === 'f8' || lowered === 'rookf8' || lowered === 'rook f8') return true;
+  return false;
+}
+
+async function chessPuzzle(game) {
+  const puzzle = CHESS_PUZZLES[0];
+  console.clear();
+  console.log(colors.bold('Chess puzzle'));
+  console.log(colors.dim('White to move. Mate in 1. Type the move in short algebraic, or q to quit.'));
+  console.log();
+  for (const line of puzzle.board) console.log('  ' + line);
+  console.log();
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  let attempts = 0;
+  const maxAttempts = 3;
+
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (r) => {
+      if (done) return;
+      done = true;
+      rl.close();
+      resolve(r);
+    };
+    const ask = () => {
+      if (done) return;
+      if (attempts >= maxAttempts) {
+        console.log(colors.error(`out of tries - answer: ${puzzle.answer}#`));
+        finish({ completed: true, win: false, attempts });
+        return;
+      }
+      rl.question(colors.bold(`move ${attempts + 1}/${maxAttempts}: `), (input) => {
+        if (done) return;
+        const s = (input || '').trim();
+        if (s.toLowerCase() === 'q' || s.toLowerCase() === 'quit') {
+          finish({ completed: false, win: false, attempts });
+          return;
+        }
+        if (s.toLowerCase() === 'hint') {
+          console.log(colors.dim(`hint: ${puzzle.hint}`));
+          ask();
+          return;
+        }
+        attempts++;
+        if (isChessMateSolution(puzzle, s)) {
+          console.log(colors.success('checkmate!'));
+          let exp = 40;
+          if (attempts === 1) exp = 120;
+          else if (attempts === 2) exp = 70;
+          console.log(colors.gold(`+${exp} EXP`));
+          if (game && game.addExp) game.addExp(exp, 'chess').catch(() => {});
+          finish({ completed: true, win: true, attempts });
+          return;
+        }
+        console.log(colors.warning('not mate - try again'));
+        ask();
+      });
+    };
+    rl.on('close', () => finish({ completed: false, win: false, attempts }));
+    ask();
+  });
+}
+
+// --- Cipher decoder (Caesar shift) ---
+function caesarEncode(text, shift) {
+  const s = ((shift % 26) + 26) % 26;
+  let out = '';
+  for (const ch of String(text)) {
+    const code = ch.charCodeAt(0);
+    if (code >= 65 && code <= 90) {
+      out += String.fromCharCode(((code - 65 + s) % 26) + 65);
+    } else if (code >= 97 && code <= 122) {
+      out += String.fromCharCode(((code - 97 + s) % 26) + 97);
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
+function caesarDecode(text, shift) {
+  return caesarEncode(text, -shift);
+}
+
+// very small dictionary used to auto-score "looks like English" guesses
+const CIPHER_DICT = ['the', 'and', 'you', 'are', 'for', 'kimi', 'terminal', 'quest', 'hello', 'explore', 'secret', 'dawn'];
+
+function scoreCipherGuess(plaintext) {
+  const lower = String(plaintext).toLowerCase();
+  let score = 0;
+  for (const w of CIPHER_DICT) {
+    if (lower.includes(w)) score++;
+  }
+  return score;
+}
+
+async function cipherDecoder(game) {
+  const phrases = [
+    'Hello explorer the dawn is near',
+    'KIMI remembers every quest you finish',
+    'Secret door opens for kind explorers'
+  ];
+  const chosen = phrases[Math.floor(Math.random() * phrases.length)];
+  const shift = 1 + Math.floor(Math.random() * 20);
+  const encoded = caesarEncode(chosen, shift);
+
+  console.clear();
+  console.log(colors.bold('Cipher decoder'));
+  console.log(colors.dim('A Caesar cipher. Find the shift (1-25) and reveal the message.'));
+  console.log();
+  console.log('  ' + colors.info(encoded));
+  console.log();
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  let attempts = 0;
+  const maxAttempts = 5;
+
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (r) => {
+      if (done) return;
+      done = true;
+      rl.close();
+      resolve(r);
+    };
+    const ask = () => {
+      if (done) return;
+      if (attempts >= maxAttempts) {
+        console.log(colors.error(`out of tries - shift was ${shift}, message: "${chosen}"`));
+        finish({ completed: true, win: false, attempts });
+        return;
+      }
+      rl.question(colors.bold(`shift ${attempts + 1}/${maxAttempts} (1-25, or 'q'): `), (input) => {
+        if (done) return;
+        const s = (input || '').trim().toLowerCase();
+        if (s === 'q' || s === 'quit') { finish({ completed: false, win: false, attempts }); return; }
+        const n = parseInt(s, 10);
+        if (!Number.isFinite(n) || n < 1 || n > 25) {
+          console.log(colors.error('please enter a number 1-25'));
+          ask();
+          return;
+        }
+        attempts++;
+        const candidate = caesarDecode(encoded, n);
+        const score = scoreCipherGuess(candidate);
+        console.log(colors.dim('  -> ') + candidate);
+        if (n === shift) {
+          console.log(colors.success('cipher cracked!'));
+          let exp = 30;
+          if (attempts === 1) exp = 90;
+          else if (attempts === 2) exp = 60;
+          console.log(colors.gold(`+${exp} EXP`));
+          if (game && game.addExp) game.addExp(exp, 'cipher').catch(() => {});
+          finish({ completed: true, win: true, attempts });
+          return;
+        }
+        if (score > 0) console.log(colors.warning(`  that looks almost readable (+${score})`));
+        else console.log(colors.dim('  still gibberish'));
+        ask();
+      });
+    };
+    rl.on('close', () => finish({ completed: false, win: false, attempts }));
+    ask();
+  });
+}
+
 module.exports = {
   snake, guess, matrix, pong, wordle, scoreGuess,
   qte, logicPuzzle, morse,
   evaluateCircuit, solveCircuit,
-  morseEncode, morseDecode, MORSE_MAP, LOGIC_GATES
+  morseEncode, morseDecode, MORSE_MAP, LOGIC_GATES,
+  // v2.4 additions
+  chessPuzzle, cipherDecoder,
+  CHESS_PUZZLES, isChessMateSolution,
+  caesarEncode, caesarDecode, scoreCipherGuess, CIPHER_DICT
 };

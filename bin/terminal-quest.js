@@ -7,6 +7,7 @@
 'use strict';
 
 const fs = require('fs');
+const path = require('path');
 const pkg = require('../package.json');
 
 function parseArgs(argv) {
@@ -31,6 +32,17 @@ function parseArgs(argv) {
       args.importFrom = argv[++i];
       args.importSlot = argv[++i];
     }
+    // v2.4 additions
+    else if (a === '--list-quests') args.listQuests = true;
+    else if (a === '--validate-quest') args.validateQuest = argv[++i];
+    else if (a.startsWith('--validate-quest=')) args.validateQuest = a.slice(17);
+    else if (a === '--cloud') {
+      args.cloudOp = argv[++i];
+      args.cloudSlot = argv[++i];
+    }
+    else if (a === '--replay') {
+      args.replay = argv[++i] || 'default';
+    }
     else args._.push(a);
   }
   return args;
@@ -54,7 +66,20 @@ Options:
   --new                      start with a fresh save (any existing slot is archived)
   --export-save <slot>       print the slot's JSON to stdout and exit
   --import-save <file> <slot>  import JSON from <file> into <slot> and exit
-  --dev                      developer mode
+  --dev                      developer mode (hot-reloads community quests)
+
+Quests (v2.4):
+  --list-quests              list all quests loaded from ./quests/*/quest.json
+  --validate-quest <path>    validate a single quest.json file and exit
+
+Replay (v2.4):
+  --replay <slot>            play back a recorded session from a save slot
+
+Cloud saves (experimental, v2.4):
+  --cloud push <slot>        push a local slot to the cloud backend (GitHub Gist)
+  --cloud pull <slot>        pull a slot from the cloud backend
+  --cloud list               list cloud-stored slots
+                             (requires GH_TOKEN env var; see docs/CLOUD_SAVE.md)
 
 Commands inside the game:
   help              list in-game commands
@@ -63,6 +88,7 @@ Commands inside the game:
   saves             list slots
   theme <name>      change theme (dark|light|retro)
   lang <code>       change language (en|zh)
+  replay [slot]     replay recorded events from the current or named slot
   exit              quit
 `);
 }
@@ -101,6 +127,99 @@ async function runImport(file, slot) {
   process.exit(0);
 }
 
+function runListQuests() {
+  const { loadQuests } = require('../src/quests');
+  const { quests, report } = loadQuests();
+  console.log(`${pkg.name} - loaded ${quests.length} quest(s)`);
+  for (const q of quests) {
+    console.log(`  [${q.id}]  ${q.title}  (${q.steps.length} step(s))`);
+    if (q.tags && q.tags.length) console.log(`    tags: ${q.tags.join(', ')}`);
+    if (q.author) console.log(`    by: ${q.author}`);
+  }
+  const failures = report.filter((r) => !r.ok);
+  if (failures.length > 0) {
+    console.log();
+    console.log(`${failures.length} quest(s) were skipped:`);
+    for (const f of failures) {
+      console.log(`  - ${f.file}`);
+      for (const e of f.errors) console.log(`      ! ${e}`);
+    }
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
+function runValidateQuest(file) {
+  const { loadQuestFile } = require('../src/quests');
+  const abs = path.resolve(String(file));
+  const { quest, errors } = loadQuestFile(abs);
+  if (quest) {
+    console.log(`ok  ${abs}`);
+    console.log(`     id=${quest.id}  title="${quest.title}"  steps=${quest.steps.length}`);
+    process.exit(0);
+  }
+  console.error(`invalid  ${abs}`);
+  for (const e of errors) console.error(`  ! ${e}`);
+  process.exit(2);
+}
+
+async function runCloud(op, slot) {
+  const { GistBackend } = require('../src/cloud');
+  const saveMod = require('../src/save');
+  if (!op) {
+    console.error('usage: --cloud <push|pull|list> [slot]');
+    process.exit(2);
+  }
+  if (!process.env.GH_TOKEN) {
+    console.error('GH_TOKEN environment variable is not set.');
+    console.error('see docs/CLOUD_SAVE.md - cloud saves are experimental and opt-in.');
+    process.exit(2);
+  }
+  const backend = new GistBackend({ token: process.env.GH_TOKEN });
+  if (op === 'list') {
+    const r = await backend.list();
+    if (!r.ok) { console.error(`cloud list failed: ${r.error}`); process.exit(2); }
+    console.log(`cloud saves (${r.items.length}):`);
+    for (const it of r.items) {
+      console.log(`  ${it.slot.padEnd(16)}  ${it.updatedAt || '-'}  ${it.url || ''}`);
+    }
+    process.exit(0);
+  }
+  if (!slot) {
+    console.error(`usage: --cloud ${op} <slot>`);
+    process.exit(2);
+  }
+  if (op === 'push') {
+    const r = await backend.push(slot);
+    if (!r.ok) { console.error(`cloud push failed: ${r.error}`); process.exit(2); }
+    console.log(`pushed slot "${slot}"  ->  ${r.url || r.id}`);
+    process.exit(0);
+  }
+  if (op === 'pull') {
+    const r = await backend.pull(slot);
+    if (!r.ok) { console.error(`cloud pull failed: ${r.error}`); process.exit(2); }
+    const write = saveMod.importSlot(slot, r.json);
+    if (!write) { console.error('pulled payload rejected by importSlot'); process.exit(2); }
+    console.log(`pulled "${slot}" (${r.bytes} bytes) -> ${write.path}`);
+    process.exit(0);
+  }
+  console.error(`unknown cloud op: ${op}`);
+  process.exit(2);
+}
+
+async function runReplay(slot) {
+  const saveMod = require('../src/save');
+  const { loadReplayFromSlot, playReplay } = require('../src/replay');
+  const events = loadReplayFromSlot(slot, saveMod);
+  if (events === null) {
+    console.error(`no save found in slot "${slot}"`);
+    process.exit(2);
+  }
+  const res = await playReplay(events, { delay: 30 });
+  console.log(`\nplayed ${res.lines} event(s).`);
+  process.exit(0);
+}
+
 function archiveSlot(slot) {
   try {
     const saveMod = require('../src/save');
@@ -125,6 +244,22 @@ async function main() {
   if (args.help) {
     printHelp();
     process.exit(0);
+  }
+  if (args.listQuests) {
+    runListQuests();
+    return;
+  }
+  if (args.validateQuest) {
+    runValidateQuest(args.validateQuest);
+    return;
+  }
+  if (args.cloudOp) {
+    await runCloud(args.cloudOp, args.cloudSlot);
+    return;
+  }
+  if (args.replay) {
+    await runReplay(args.replay);
+    return;
   }
   if (args.exportSave) {
     await runExport(args.exportSave);

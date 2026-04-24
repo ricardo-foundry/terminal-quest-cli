@@ -82,3 +82,56 @@ test('unlocking an extra achievement persists across instances', async () => {
   const g2 = new TerminalGame({ slot });
   assert.ok(g2.achievements.night_owl.unlocked, 'reloaded as unlocked');
 });
+
+// ---- v2.4: five new achievements ----
+test('v2.4 adds completionist/speedrunner/historian/pacifist/collector', () => {
+  const ids = Object.keys(EXTRA_ACHIEVEMENTS);
+  assert.ok(ids.includes('completionist_v24'));
+  assert.ok(ids.includes('speedrunner_v24'));
+  assert.ok(ids.includes('historian_v24'));
+  assert.ok(ids.includes('pacifist'));
+  assert.ok(ids.includes('collector_v24'));
+});
+
+test('completionist_v24 fires when every community quest is done', () => {
+  const ids = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, {
+    questPackTotal: 2,
+    questPackDone: 2
+  });
+  assert.ok(ids.includes('completionist_v24'));
+});
+
+test('historian_v24 needs both new scenes visited', () => {
+  const half = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, {
+    visitedDirs: ['/library']
+  });
+  assert.ok(!half.includes('historian_v24'));
+  const both = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, {
+    visitedDirs: ['/library', '/station']
+  });
+  assert.ok(both.includes('historian_v24'));
+});
+
+test('pacifist requires master unlocked AND minAlignment >= 0', () => {
+  const nope = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, {
+    masterUnlocked: true,
+    minAlignment: -1
+  });
+  assert.ok(!nope.includes('pacifist'));
+  const yes = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, {
+    masterUnlocked: true,
+    minAlignment: 0
+  });
+  assert.ok(yes.includes('pacifist'));
+});
+
+test('collector_v24 needs one item from each category', () => {
+  const partial = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, {
+    inventory: ['key-shard-1', 'health-potion']
+  });
+  assert.ok(!partial.includes('collector_v24'));
+  const full = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, {
+    inventory: ['key-shard-1', 'health-potion', 'torch', 'rare-stamp']
+  });
+  assert.ok(full.includes('collector_v24'));
+});

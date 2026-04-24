@@ -82,3 +82,58 @@ test('saved state survives a new instance', () => {
   assert.equal(g2.gameState.exp, 777);
   assert.ok(g2.gameState.visitedDirs.includes('/system/core'));
 });
+
+// ---- v2.4: quests + replay integration ----
+
+test('v2.4: new scenes /library and /station are accessible from cd', () => {
+  const g = new TerminalGame({ slot: 'scenes-' + Date.now() });
+  const libr = g.getDirByPath('/library');
+  const stat = g.getDirByPath('/station');
+  assert.ok(libr && libr.type === 'dir', 'library dir must exist');
+  assert.ok(stat && stat.type === 'dir', 'station dir must exist');
+  assert.ok(libr.children['librarian.npc']);
+  assert.ok(stat.children['conductor.npc']);
+});
+
+test('v2.4: community quests load into the game instance', () => {
+  const g = new TerminalGame({ slot: 'cquests-' + Date.now() });
+  assert.ok(Array.isArray(g.communityQuests));
+  const ids = g.communityQuests.map((q) => q.id).sort();
+  assert.ok(ids.includes('starter-lab'));
+  assert.ok(ids.includes('shadow-archive'));
+  assert.ok(g.gameState.questPackTotal >= 2);
+});
+
+test('v2.4: evaluateCommunityQuests marks done and grants rewards', () => {
+  const g = new TerminalGame({ slot: 'cquests-run-' + Date.now() });
+  // Simulate a completed starter-lab run
+  g.gameState.visitedDirs.push('/world/lab');
+  g.gameState.visitedFiles.push('/world/lab/notice.txt', '/world/lab/research_log.txt');
+  g.gameState.level = 3;
+  g.evaluateCommunityQuests();
+  const state = g.gameState.communityQuestState['starter-lab'];
+  assert.ok(state && state.done, 'starter-lab should be marked done');
+  assert.ok(g.gameState.inventory.includes('lab-badge'));
+});
+
+test('v2.4: replay recorder initialises on the game instance', () => {
+  const g = new TerminalGame({ slot: 'replay-init-' + Date.now() });
+  assert.ok(g.replay);
+  assert.ok(Array.isArray(g.gameState.replay));
+  g.replay.record('command', 'pwd');
+  assert.equal(g.gameState.replay.length, 1);
+});
+
+test('v2.4: minAlignment is tracked across checkQuests calls', () => {
+  const g = new TerminalGame({ slot: 'align-' + Date.now() });
+  g.gameState.alignment = 2;
+  g.checkQuests();
+  assert.equal(g.gameState.minAlignment, 2);
+  g.gameState.alignment = -3;
+  g.checkQuests();
+  assert.equal(g.gameState.minAlignment, -3);
+  g.gameState.alignment = 5;
+  g.checkQuests();
+  // min stays at the lowest seen
+  assert.equal(g.gameState.minAlignment, -3);
+});
