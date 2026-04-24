@@ -93,8 +93,17 @@ class CommandSystem {
 
   async execute(input) {
     if (typeof input !== 'string') return;
+    // Drop NUL bytes + C0/C1 controls except tab — defend against accidental
+    // binary paste from clipboard managers and pty muxers.
+    // eslint-disable-next-line no-control-regex
+    input = input.replace(/[\x00-\x08\x0b-\x1f\x7f]/g, '');
     input = input.trim();
     if (!input) return;
+    // Guard against runaway pastes (e.g. someone pipes a file into stdin).
+    if (input.length > 1000) {
+      console.log(colors.warning(`input truncated to 1000 chars (was ${input.length})`));
+      input = input.slice(0, 1000);
+    }
 
     // history substitution: !! and !<n>
     if (input === '!!') {
@@ -125,12 +134,17 @@ class CommandSystem {
     if (ps.commandHistory.length > 50) ps.commandHistory = ps.commandHistory.slice(-50);
     ps.sessionCommands = (ps.sessionCommands || 0) + 1;
 
-    // alias expansion: look up the first token only, replace with alias value
+    // alias expansion: look up the first token only, replace with alias
+    // value. Cycles (a=b, b=a) are capped at 8 rewrites so a hand-crafted
+    // save file cannot lock the REPL in an infinite loop.
     const aliases = ps.aliases || {};
-    const firstSpace = input.indexOf(' ');
-    const head = firstSpace === -1 ? input : input.slice(0, firstSpace);
-    const tail = firstSpace === -1 ? '' : input.slice(firstSpace);
-    if (aliases[head]) {
+    const seenAliases = new Set();
+    for (let i = 0; i < 8; i++) {
+      const fs2 = input.indexOf(' ');
+      const head = fs2 === -1 ? input : input.slice(0, fs2);
+      if (!aliases[head] || seenAliases.has(head)) break;
+      seenAliases.add(head);
+      const tail = fs2 === -1 ? '' : input.slice(fs2);
       input = aliases[head] + tail;
     }
 
@@ -1037,6 +1051,10 @@ Thank you for exploring.
     }
     const pattern = args[0];
     const filename = args[1];
+    if (pattern.length > 200) {
+      console.log(colors.error('grep: pattern too long (max 200 chars)'));
+      return;
+    }
     const file = this.game.resolvePath(filename);
     if (!file || file.type !== 'file') {
       console.log(colors.error(`grep: ${filename}: not found`));
@@ -1044,9 +1062,11 @@ Thank you for exploring.
     }
     const lines = (file.content || '').split('\n');
     let found = false;
-    const re = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    // Always escape user input — we never accept raw regex from the
+    // player, preventing pathological ReDoS inputs like `(a+)+`.
+    const needle = pattern.toLowerCase();
     for (let i = 0; i < lines.length; i++) {
-      if (re.test(lines[i])) {
+      if (lines[i].toLowerCase().includes(needle)) {
         console.log(`${colors.dim(i + 1 + ':')} ${lines[i]}`);
         found = true;
       }
@@ -1055,13 +1075,14 @@ Thank you for exploring.
   }
 
   cmdFind(args) {
-    const pattern = args[0] || '';
+    const pattern = (args[0] || '').slice(0, 200);
+    const needle = pattern.toLowerCase();
     const results = [];
     const walk = (dir, path) => {
       if (!dir.children) return;
       for (const [name, item] of Object.entries(dir.children)) {
         const full = path + '/' + name;
-        if (name.toLowerCase().includes(pattern.toLowerCase())) {
+        if (name.toLowerCase().includes(needle)) {
           results.push({ path: full, type: item.type });
         }
         if (item.type === 'dir') walk(item, full);

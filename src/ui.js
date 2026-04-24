@@ -16,57 +16,42 @@
 
 const chalk = require('chalk');
 const { getTheme } = require('./themes');
+const { getCapabilities } = require('./terminal');
+const { visualWidth, padVisual, centerVisual, truncateVisual, wrapVisual } = require('./wcwidth');
 const { t } = require('./i18n');
 
 // Live palette — mutate in place so other modules that keep a reference
 // to `colors` continue to work after a theme switch.
 const colors = {};
 
+/**
+ * Apply a theme palette in-place to the shared `colors` object.
+ * Rebinds rainbow / gradient / neon helpers after swap.
+ *
+ * @param {string} [name='dark'] theme name
+ */
 function applyTheme(name = 'dark') {
   const palette = getTheme(name);
   // reset existing keys
   for (const k of Object.keys(colors)) delete colors[k];
   Object.assign(colors, palette);
-  colors.rainbow = rainbow;
-  colors.gradient = (text) => rainbow(text);
-  colors.neon = (text) => chalk.bold.cyan(text);
+  const caps = getCapabilities();
+  colors.rainbow = caps.colorLevel === 0 ? (t) => t : rainbow;
+  colors.gradient = (text) => colors.rainbow(text);
+  colors.neon = caps.colorLevel === 0 ? (t) => t : (text) => chalk.bold.cyan(text);
   colors.currentThemeName = name;
 }
 
+/**
+ * Rainbow-colour a string, one glyph per ANSI hue.
+ * No-op on non-colour terminals.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
 function rainbow(text) {
   const palette = [chalk.red, chalk.yellow, chalk.green, chalk.cyan, chalk.blue, chalk.magenta];
   return text.split('').map((c, i) => palette[i % palette.length](c)).join('');
-}
-
-// visual-width helpers (CJK, emoji roughly = 2 columns)
-function visualWidth(str) {
-  // strip ANSI
-  const clean = str.replace(/\x1b\[[0-9;]*m/g, '');
-  let w = 0;
-  for (const ch of clean) {
-    const code = ch.codePointAt(0);
-    if (
-      (code >= 0x1100 && code <= 0x115f) ||
-      (code >= 0x2e80 && code <= 0x9fff) ||
-      (code >= 0xa000 && code <= 0xa4cf) ||
-      (code >= 0xac00 && code <= 0xd7a3) ||
-      (code >= 0xf900 && code <= 0xfaff) ||
-      (code >= 0xfe30 && code <= 0xfe4f) ||
-      (code >= 0xff00 && code <= 0xff60) ||
-      (code >= 0xffe0 && code <= 0xffe6) ||
-      (code >= 0x1f300 && code <= 0x1fbff)
-    ) {
-      w += 2;
-    } else if (code >= 0x20) {
-      w += 1;
-    }
-  }
-  return w;
-}
-
-function padVisual(str, width, padChar = ' ') {
-  const need = Math.max(0, width - visualWidth(str));
-  return str + padChar.repeat(need);
 }
 
 // Animations -------------------------------------------------------------
@@ -369,5 +354,8 @@ module.exports = {
   HELP_TEXT,
   visualWidth,
   padVisual,
+  centerVisual,
+  truncateVisual,
+  wrapVisual,
   applyTheme
 };

@@ -1,18 +1,108 @@
 /**
  * @module themes
- * @description Colour palettes (chalk-based) for dark / light / retro modes.
+ * @description Colour palettes (chalk-based) for dark / light / retro modes,
+ *   plus an ASCII-only fallback palette for low-colour terminals.
  *
  * Custom themes can be added by appending a new entry to `THEMES`. Each
  * palette must implement: primary, secondary, accent, warning, error,
  * success, info, dim, white, bold, gold, purple, orange.
  *
- * `chalk` autodetects terminal colour support and degrades gracefully:
- *   - 256-colour / truecolor terminals get the exact hex tones (retro CRT)
- *   - 16-colour terminals collapse to the nearest named ANSI colour
- *   - non-TTY (CI, pipes) strips colour entirely.
+ * Colour selection walks a four-step degradation chain:
+ *   truecolor (chalk hex)   -- COLORTERM=truecolor, xterm-256color
+ *   256-colour (chalk ANSI) -- modern terminals with TERM containing 256
+ *   16-colour (chalk named) -- generic xterm/linux/screen
+ *   plaintext (ASCII decorators) -- NO_COLOR, --no-color, TERM=dumb, pipes
+ *
+ * The exposed `getTheme(name)` returns the palette appropriate for the
+ * detected capability level so no caller needs to repeat the check.
  */
 
+'use strict';
+
 const chalk = require('chalk');
+const { getCapabilities, ASCII_DECORATORS } = require('./terminal');
+
+/**
+ * Build a plaintext theme by mapping each role through an ASCII decorator.
+ *
+ * @returns {Record<string, (s:string)=>string>}
+ */
+function buildPlainTheme() {
+  return {
+    primary: ASCII_DECORATORS.primary,
+    secondary: ASCII_DECORATORS.secondary,
+    accent: ASCII_DECORATORS.accent,
+    warning: ASCII_DECORATORS.warning,
+    error: ASCII_DECORATORS.error,
+    success: ASCII_DECORATORS.success,
+    info: ASCII_DECORATORS.info,
+    dim: ASCII_DECORATORS.dim,
+    white: ASCII_DECORATORS.white,
+    bold: ASCII_DECORATORS.bold,
+    gold: ASCII_DECORATORS.gold,
+    purple: ASCII_DECORATORS.purple,
+    orange: ASCII_DECORATORS.orange
+  };
+}
+
+/**
+ * Build a 16-colour (named-ANSI only) theme for modest terminals.
+ * Avoids hex calls so chalk cannot attempt truecolor escape codes.
+ *
+ * @param {'dark'|'light'|'retro'} name
+ * @returns {object}
+ */
+function build16Theme(name) {
+  if (name === 'light') {
+    return {
+      primary: chalk.green,
+      secondary: chalk.cyan,
+      accent: chalk.magenta,
+      warning: chalk.yellow,
+      error: chalk.red,
+      success: chalk.greenBright,
+      info: chalk.blueBright,
+      dim: chalk.gray,
+      white: chalk.black,
+      bold: chalk.bold,
+      gold: chalk.yellow,
+      purple: chalk.magenta,
+      orange: chalk.yellow
+    };
+  }
+  if (name === 'retro') {
+    return {
+      primary: chalk.yellow,
+      secondary: chalk.yellow,
+      accent: chalk.yellowBright,
+      warning: chalk.yellow,
+      error: chalk.red,
+      success: chalk.yellow,
+      info: chalk.yellowBright,
+      dim: chalk.gray,
+      white: chalk.yellowBright,
+      bold: chalk.bold,
+      gold: chalk.yellow,
+      purple: chalk.yellow,
+      orange: chalk.yellow
+    };
+  }
+  return {
+    primary: chalk.greenBright,
+    secondary: chalk.cyanBright,
+    accent: chalk.magentaBright,
+    warning: chalk.yellowBright,
+    error: chalk.redBright,
+    success: chalk.green,
+    info: chalk.blue,
+    dim: chalk.gray,
+    white: chalk.white,
+    bold: chalk.bold,
+    gold: chalk.yellow,
+    purple: chalk.magenta,
+    orange: chalk.yellow
+  };
+}
 
 const THEMES = {
   dark: {
@@ -46,7 +136,6 @@ const THEMES = {
     orange: chalk.hex('#D2691E')
   },
   retro: {
-    // amber monochrome - classic CRT
     primary: chalk.hex('#FFB000'),
     secondary: chalk.hex('#FFA000'),
     accent: chalk.hex('#FFC040'),
@@ -63,12 +152,28 @@ const THEMES = {
   }
 };
 
+/**
+ * @returns {string[]} list of theme names the caller may set.
+ */
 function availableThemes() {
   return Object.keys(THEMES);
 }
 
+/**
+ * Fetch the colour palette that matches `name`, degraded to the
+ * current terminal's capability level.
+ *
+ * @param {string} name theme name ('dark' | 'light' | 'retro' | ...)
+ * @returns {Record<string,(s:string)=>string>} palette
+ */
 function getTheme(name) {
-  return THEMES[name] || THEMES.dark;
+  const caps = getCapabilities();
+  const themeName = THEMES[name] ? name : 'dark';
+  if (caps.colorLevel === 0) return buildPlainTheme();
+  if (caps.colorLevel === 1) return build16Theme(themeName);
+  // level 2 (256-colour) and 3 (truecolor) both accept hex —
+  // chalk itself down-samples 256-colour terminals.
+  return THEMES[themeName];
 }
 
-module.exports = { THEMES, availableThemes, getTheme };
+module.exports = { THEMES, availableThemes, getTheme, buildPlainTheme, build16Theme };

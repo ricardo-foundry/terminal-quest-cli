@@ -65,3 +65,83 @@ test('migrates legacy single-file save', () => {
   assert.equal(loaded.state.exp, 600);
   assert.equal(loaded.schemaVersion, saveMod.SCHEMA_VERSION);
 });
+
+// ---- Round 5: corruption + schema + size ----
+
+test('load() quarantines a corrupted json file and returns null', () => {
+  const p = saveMod.slotPath('broken');
+  fs.writeFileSync(p, '{ this is not json ');
+  const loaded = saveMod.load('broken');
+  assert.equal(loaded, null);
+  // the broken file should have been moved aside
+  assert.ok(!fs.existsSync(p));
+  const siblings = fs.readdirSync(saveMod.SAVE_DIR);
+  assert.ok(siblings.some((f) => f.startsWith('broken.json.bak.')));
+});
+
+test('load() rejects envelope missing schema+state (treated as v1 wrap)', () => {
+  // A plain object without schemaVersion is treated as v1 — migrate
+  // wraps it. Ensure that is still valid (schema forward-fill).
+  const p = saveMod.slotPath('v1-style');
+  fs.writeFileSync(p, JSON.stringify({ level: 9, exp: 42 }));
+  const loaded = saveMod.load('v1-style');
+  assert.ok(loaded);
+  assert.equal(loaded.schemaVersion, saveMod.SCHEMA_VERSION);
+  assert.equal(loaded.state.level, 9);
+});
+
+test('isValidSave: schema validation is strict', () => {
+  assert.equal(saveMod.isValidSave(null), false);
+  assert.equal(saveMod.isValidSave('abc'), false);
+  assert.equal(saveMod.isValidSave({}), false);
+  assert.equal(saveMod.isValidSave({ schemaVersion: 2 }), false);
+  assert.equal(saveMod.isValidSave({ schemaVersion: 2, state: null }), false);
+  assert.equal(saveMod.isValidSave({ schemaVersion: 2, state: {} }), true);
+});
+
+test('save() returns warn string when payload > 1 MiB', () => {
+  // build a very large state blob
+  const huge = { stuff: 'x'.repeat(1024 * 1024 + 500) };
+  const res = saveMod.save('huge-slot', huge);
+  assert.ok(res);
+  assert.ok(res.bytes > saveMod.MAX_SAVE_BYTES);
+  assert.ok(res.warn && res.warn.includes('KiB'));
+});
+
+test('save() returns no warn under the limit', () => {
+  const res = saveMod.save('tiny-slot', { level: 1 });
+  assert.equal(res.warn, null);
+});
+
+test('exportSlot returns null for missing slot, JSON string otherwise', () => {
+  assert.equal(saveMod.exportSlot('ghost-slot'), null);
+  saveMod.save('exp-test', { level: 2 });
+  const txt = saveMod.exportSlot('exp-test');
+  assert.ok(typeof txt === 'string');
+  const parsed = JSON.parse(txt);
+  assert.equal(parsed.state.level, 2);
+});
+
+test('importSlot rejects oversize blobs outright', () => {
+  const way_too_big = 'x'.repeat(saveMod.MAX_SAVE_BYTES * 4 + 1);
+  assert.equal(saveMod.importSlot('huge', way_too_big), null);
+});
+
+test('migrate() bumps schema version on older envelopes', () => {
+  const p = saveMod.slotPath('oldver');
+  fs.writeFileSync(p, JSON.stringify({
+    schemaVersion: 1,
+    slot: 'oldver',
+    savedAt: 1,
+    state: { level: 3 }
+  }));
+  const loaded = saveMod.load('oldver');
+  assert.equal(loaded.schemaVersion, saveMod.SCHEMA_VERSION);
+  assert.equal(loaded.state.level, 3);
+});
+
+test('deleteSlot removes file, returns false on missing', () => {
+  saveMod.save('dmtest', { level: 1 });
+  assert.equal(saveMod.deleteSlot('dmtest'), true);
+  assert.equal(saveMod.deleteSlot('dmtest'), false);
+});

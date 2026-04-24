@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-04-25
+
+### Added (v2.3 robustness + cross-platform)
+- `src/wcwidth.js` — dependency-free East-Asian-Width calculator.
+  Exports `visualWidth`, `padVisual`, `padVisualStart`, `centerVisual`,
+  `truncateVisual`, `wrapVisual`, `stripAnsi`, `isWide`, `isZeroWidth`.
+  Correctly treats CJK / Hangul / kana / fullwidth / emoji as width 2
+  and combining marks / ZWJ / VS / ANSI CSI as width 0.
+- `src/terminal.js` — capability detector. Honours `NO_COLOR`,
+  `--no-color`, `FORCE_COLOR`, `COLORTERM=truecolor`, `TERM=dumb`,
+  non-TTY pipes, and Windows build-number probing. Exposes
+  `getCapabilities()` (memoised) and `refresh()`.
+- Four-step colour degradation chain in `src/themes.js`:
+  truecolor (hex) -> 256-colour (named) -> 16-colour (named) ->
+  plaintext ASCII decorators (`[WARN] `, `[ERROR] `, `[OK] `, `>> `, `* `).
+- `bin/terminal-quest.js` new flags: `--no-color`, `--new` (archive old
+  slot & start fresh), `--export-save <slot>` (print JSON to stdout),
+  `--import-save <file> <slot>` (load external JSON into a slot).
+- `src/save.js` corruption handling: unparseable saves are renamed
+  `<slot>.json.bak.<timestamp>` and `load()` returns `null` so the
+  next run starts clean. 1 MiB soft-cap warning on large saves.
+  New exports: `exportSlot`, `importSlot`, `isValidSave`,
+  `backupCorrupt`, `MAX_SAVE_BYTES`.
+- `docs/CROSS_PLATFORM.md` — platform / Node matrix, degradation
+  chain, path-handling vocabulary, known limitations, opt-out table.
+- 61 new tests — `wcwidth.test.js` (25), `themes.test.js` (11),
+  `cross-platform.test.js` (10), plus extensions to `save.test.js` (11)
+  and `commands.test.js` (9). Total test count 51 -> 112.
+
+### Changed
+- `src/ui.js` delegates `visualWidth` / `padVisual` / `centerVisual` /
+  `truncateVisual` / `wrapVisual` to `src/wcwidth.js` so every panel,
+  table and progress bar shares one EAW table.
+- `src/game.js#normalizePath` now uses `path.posix.resolve` under the
+  hood and coerces any Windows backslash input to forward-slash. The
+  virtual filesystem is posix on every host.
+- `CommandSystem#execute` strips C0/C1 control bytes (`\x00-\x1f`,
+  `\x7f`), truncates input > 1000 chars, and caps alias re-expansion
+  at 8 rewrites to defeat cyclic aliases.
+- `cmdGrep` replaced its escaped-regex implementation with plain
+  `String.includes`, preventing any ReDoS shape from user input.
+  Pattern length capped at 200.
+- `cmdFind` pattern length capped at 200.
+- Applied `@param` / `@returns` JSDoc tags to every public function in
+  `src/save.js`, `src/wcwidth.js`, `src/terminal.js`, `src/themes.js`,
+  `src/ui.js` (`applyTheme`, `rainbow`), and `src/game.js`
+  (`normalizePath`).
+
+### Fixed
+- Corrupted save files no longer throw on startup; they are quarantined
+  and the player gets a fresh state.
+- Oversized input pastes no longer hang the REPL — they are truncated
+  and the player is told.
+- Pathological regex-shaped `grep` queries (`(a+)+$`, etc.) are no
+  longer evaluated as regex and cannot trigger ReDoS.
+- Windows path separator pasted into `cd` is coerced to `/` before
+  resolution; previously `cd foo\\bar` returned a non-existent path.
+
 ## [2.2.0] - 2026-04-25
 
 ### Added (v2.2 visual & demo)

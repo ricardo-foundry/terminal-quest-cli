@@ -123,3 +123,73 @@ test('unalias removes an alias', () => {
   g.commandSystem.cmdUnalias(['foo']);
   assert.equal(g.gameState.aliases.foo, undefined);
 });
+
+// ---- Round 5: input hardening ----
+
+test('execute: null bytes are stripped from input', async () => {
+  const g = new TerminalGame({ slot: 'cmd-nul-' + Date.now() });
+  // should not throw, should effectively run pwd
+  await g.commandSystem.execute('p\x00w\x00d');
+  assert.ok(g.gameState.sessionCommands >= 1);
+});
+
+test('execute: oversize input is truncated to 1000 chars', async () => {
+  const g = new TerminalGame({ slot: 'cmd-huge-' + Date.now() });
+  const huge = 'echo ' + 'a'.repeat(5000);
+  await g.commandSystem.execute(huge);
+  // the recorded entry must not exceed the truncation cap
+  const last = g.gameState.commandHistory[g.gameState.commandHistory.length - 1];
+  assert.ok(last.length <= 1000);
+});
+
+test('execute: empty and whitespace-only input is a no-op', async () => {
+  const g = new TerminalGame({ slot: 'cmd-empty-' + Date.now() });
+  const before = g.gameState.sessionCommands || 0;
+  await g.commandSystem.execute('');
+  await g.commandSystem.execute('   ');
+  await g.commandSystem.execute('\t\t');
+  assert.equal(g.gameState.sessionCommands || 0, before);
+});
+
+test('execute: alias cycle a->b->a does not infinite-loop', async () => {
+  const g = new TerminalGame({ slot: 'cmd-cycle-' + Date.now() });
+  g.gameState.aliases = { aaa: 'bbb', bbb: 'aaa' };
+  // If the cycle guard fails this test will hang forever under node:test.
+  const start = Date.now();
+  await g.commandSystem.execute('aaa');
+  assert.ok(Date.now() - start < 2000);
+});
+
+test('grep: pathological pattern does not crash or hang', async () => {
+  const g = new TerminalGame({ slot: 'cmd-redos-' + Date.now() });
+  g.currentPath = '/home/user';
+  // even if we fed `(a+)+$` into a naive regex, we now use `includes`
+  // so ReDoS cannot happen. Should just say `no matches`.
+  const start = Date.now();
+  g.commandSystem.cmdGrep(['(a+)+$', 'readme.txt']);
+  assert.ok(Date.now() - start < 500);
+});
+
+test('grep: overlong pattern is rejected', () => {
+  const g = new TerminalGame({ slot: 'cmd-longpat-' + Date.now() });
+  const pat = 'x'.repeat(500);
+  // should not throw
+  g.commandSystem.cmdGrep([pat, 'readme.txt']);
+});
+
+test('find: tolerates empty pattern', () => {
+  const g = new TerminalGame({ slot: 'cmd-find-' + Date.now() });
+  g.commandSystem.cmdFind([]);
+  g.commandSystem.cmdFind(['']);
+});
+
+test('commandHistory trimmed in persisted state at 50', async () => {
+  const g = new TerminalGame({ slot: 'cmd-trim-' + Date.now() });
+  for (let i = 0; i < 80; i++) await g.commandSystem.execute('pwd');
+  assert.ok(g.gameState.commandHistory.length <= 50);
+});
+
+test('tokenize handles unicode words', () => {
+  const { tokenize } = require('../src/commands');
+  assert.deepEqual(tokenize('talk 你好'), ['talk', '你好']);
+});

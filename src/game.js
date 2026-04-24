@@ -14,6 +14,7 @@
  */
 
 const readline = require('readline');
+const pathPosix = require('path').posix;
 const { colors, bootSequence, showAchievement, showLevelUp, applyTheme } = require('./ui');
 const { FILE_SYSTEM, ACHIEVEMENTS, QUESTS, LEVELS } = require('./data');
 const { EXTRA_ACHIEVEMENTS, evaluateAutoUnlocks } = require('./achievements');
@@ -118,7 +119,13 @@ class TerminalGame {
         questsState,
         achievementsState
       };
-      saveMod.save(this.slot, state);
+      const res = saveMod.save(this.slot, state);
+      // Surface the 1-MiB warning once per save cycle so hoarders know.
+      if (res && res.warn && !this._saveWarnShown) {
+        this._saveWarnShown = true;
+        console.log(colors.warning && colors.warning(`[save] ${res.warn}`));
+        console.log(colors.dim && colors.dim('  tip: use `terminal-quest --export-save ' + this.slot + ' > backup.json`'));
+      }
     } catch (e) {
       // silent in interactive mode; caller can surface if needed
     }
@@ -201,24 +208,24 @@ class TerminalGame {
   }
 
   // -------- File system helpers --------
+  /**
+   * Normalise a game-internal path. Uses `path.posix` so Windows's
+   * backslash separator never leaks into the virtual filesystem —
+   * the virtual FS is always forward-slash regardless of host OS.
+   *
+   * @param {string} p raw user-supplied path
+   * @returns {string} absolute posix path
+   */
   normalizePath(p) {
     if (!p) return this.currentPath;
     if (p === '~') return '/home/user';
     if (p.startsWith('~/')) p = '/home/user/' + p.slice(2);
-    let base;
-    if (p.startsWith('/')) {
-      base = p;
-    } else {
-      base = this.currentPath === '/' ? '/' + p : this.currentPath + '/' + p;
-    }
-    const parts = base.split('/').filter(Boolean);
-    const stack = [];
-    for (const part of parts) {
-      if (part === '.') continue;
-      if (part === '..') stack.pop();
-      else stack.push(part);
-    }
-    return '/' + stack.join('/');
+    // Defensive: if a Windows path ever slips in (user paste), coerce.
+    p = p.replace(/\\/g, '/');
+    const base = p.startsWith('/') ? p : pathPosix.join(this.currentPath || '/', p);
+    // posix.resolve collapses . and .. for us safely.
+    const resolved = pathPosix.resolve('/', base);
+    return resolved;
   }
 
   resolvePath(p) {
