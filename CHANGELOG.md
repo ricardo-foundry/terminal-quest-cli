@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-04-25
+
+### Added (v2.2 visual & demo)
+- README rebuilt around a 30-second pitch: hero ASCII art, eight badges,
+  `npx terminal-quest-cli` callout, "What does it look like?" embedded
+  ASCII session, 3x3 feature grid and a "Why another text adventure?"
+  differentiator section.
+- `docs/ascii-logo.txt` — large logo for splash screens / GitHub social
+  preview replacements.
+- `docs/og-card.svg` — 1200x630 social card for Twitter / OG / LinkedIn
+  link previews.
+- `docs/session-transcript.md` — verbatim 50-line sample play session
+  used as the README demo.
+- `docs/demo.cast.placeholder` — instructions for capturing the real
+  asciinema recording (command, validation, embed snippet).
+- `docs/RELEASING.md` — npm publish checklist (bump -> tag -> push ->
+  GitHub Actions provenance publish, plus rollback notes).
+- JSDoc `@module` headers on every file in `src/` describing
+  responsibilities, exports and side-effect contracts.
+
+### Changed
+- `package.json#files` now ships `docs/` and `CHANGELOG.md` alongside
+  `bin/`, `src/`, `README.md`, `LICENSE`. Description rewritten in
+  English to surface better in npm search.
+- Bumped `version` to 2.2.0 (no behaviour break vs 2.1).
+- `.npmignore` rebuilt to whitelist-friendly: explicit excludes for
+  test/, dev configs, `.github/`, `install.sh`, `PUBLISH.md`, plus
+  large recording artefacts (`*.cast`, `*.gif`, `*.mp4`).
+
+### Fixed
+- `cmdLoad`: after loading a slot, the in-memory `achievements` map
+  now includes `EXTRA_ACHIEVEMENTS` *and* re-attaches their `check`
+  functions (lost across the JSON round-trip). Without this fix,
+  every auto-unlock check silently returned undefined after `load`.
+- `cmdCd`: gate checks (level + day/night `accessRule`) now run
+  strictly before any state mutation. Previously `shadow_walker`
+  was awarded even if a subsequent gate denied the move, leaking
+  achievement state on a no-op `cd`.
+
 ### Added (v2.1 content depth)
 - 16 extra achievements spanning exploration, puzzle, combat, collection,
   speedrun and hidden categories. Auto-evaluator runs every turn.
@@ -86,6 +125,7 @@ testable `src/` module tree and ships a real `bin/` CLI.
 - Hidden-file discovery mechanic.
 - Early achievement prototype.
 
-[Unreleased]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v2.0.0...v2.2.0
 [2.0.0]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/Ricardo-M-L/terminal-quest-cli/releases/tag/v1.0.0

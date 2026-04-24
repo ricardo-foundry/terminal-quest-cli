@@ -1,13 +1,20 @@
-// ============================================
-// Terminal Quest CLI - achievement definitions and evaluator
-// ============================================
-// Split out from data.js in v2.1 so new achievements can be added
-// without touching the giant FILE_SYSTEM literal.
-//
-// Each achievement has:
-//   id, name, icon, desc, reward, category, hidden?, unlocked
-//   check(gs): function that returns true when conditions are met.
-//              Absence of check means it is only ever unlocked imperatively.
+/**
+ * @module achievements
+ * @description The 16 v2.1 "extra" achievements plus the auto-unlock evaluator.
+ *
+ * Split out from data.js in v2.1 so new achievements can be added without
+ * touching the giant FILE_SYSTEM literal.
+ *
+ * Each entry has:
+ *   id, name, icon, desc, reward, category, hidden?, unlocked
+ *   check(gs)  — returns true when the achievement should fire.
+ *                Absence of `check` means it is only unlocked imperatively
+ *                (via `game.unlockAchievement(id)` from a command handler).
+ *
+ * IMPORTANT: `check` functions do NOT survive JSON round-trips. After a
+ * `load`, callers must re-attach them from this module — see
+ * commands.js#cmdLoad and game.js#constructor.
+ */
 
 // Category tags: exploration / puzzle / combat / collection / speedrun / hidden
 const EXTRA_ACHIEVEMENTS = {

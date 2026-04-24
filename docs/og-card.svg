@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1020"/>
+      <stop offset="100%" stop-color="#1b1230"/>
+    </linearGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFD080"/>
+      <stop offset="100%" stop-color="#FFB000"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- terminal window chrome -->
+  <rect x="80" y="80" width="1040" height="470" rx="14" fill="#08101c" stroke="#2a3550" stroke-width="2"/>
+  <rect x="80" y="80" width="1040" height="38" rx="14" fill="#101a2e"/>
+  <rect x="80" y="105" width="1040" height="13" fill="#101a2e"/>
+  <circle cx="110" cy="99" r="7" fill="#ff5f56"/>
+  <circle cx="135" cy="99" r="7" fill="#ffbd2e"/>
+  <circle cx="160" cy="99" r="7" fill="#27c93f"/>
+  <text x="600" y="105" text-anchor="middle" fill="#7a8aa6" font-size="14">terminal-quest-cli</text>
+
+  <!-- title -->
+  <text x="120" y="180" fill="url(#amber)" font-size="56" font-weight="700" filter="url(#glow)">Terminal Quest</text>
+  <text x="120" y="220" fill="#FFC68A" font-size="22" opacity="0.85">An RPG that lives entirely in your terminal.</text>
+
+  <!-- mock prompt + ascii art mini-map -->
+  <g font-size="20" fill="#FFB000">
+    <text x="120" y="282">[🌙 19:00] [Lv.3] explorer@kimi-os:/shadow/archive$ <tspan fill="#FFE5B4">scan</tspan></text>
+    <text x="120" y="314" fill="#FFD080">[scan] revealing hidden entries...</text>
+    <text x="120" y="342" fill="#FFE5B4">  .keychain    .void/    fragment_AW4K3</text>
+    <text x="120" y="380">[🌙 19:00] [Lv.3] explorer@kimi-os:/shadow/archive$ <tspan fill="#FFE5B4">unlock master</tspan></text>
+    <text x="120" y="412" fill="#9DFFB0">*** ACHIEVEMENT UNLOCKED ***  Awakened</text>
+    <text x="120" y="436" fill="#7a8aa6" font-size="16">8 minigames · 34 achievements · 2 languages · 3 themes</text>
+  </g>
+
+  <!-- bottom stripe -->
+  <rect x="80" y="490" width="1040" height="60" rx="0" fill="#101a2e"/>
+  <text x="100" y="528" fill="#FFB000" font-size="22" font-weight="700">$ npx terminal-quest-cli</text>
+  <text x="1100" y="528" text-anchor="end" fill="#7a8aa6" font-size="16">github.com/Ricardo-M-L/terminal-quest-cli</text>
+
+  <!-- footer -->
+  <text x="600" y="600" text-anchor="middle" fill="#445575" font-size="14">MIT · Node ≥ 14 · macOS · Linux · Windows</text>
+</svg>

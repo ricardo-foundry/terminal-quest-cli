@@ -1,8 +1,19 @@
-// ============================================
-// Terminal Quest CLI - in-game time & day/night cycle
-// ============================================
-// The game tracks "turns": each interactive command is 1 turn, wait commands
-// advance more. A full day-night cycle is 24 turns split into 4 phases.
+/**
+ * @module time
+ * @description In-game day/night cycle and area access rules.
+ *
+ * The game tracks "turns" in `gameState.turn`:
+ *   - each interactive command spends 1 turn,
+ *   - `wait <n>` / `sleep` advance more,
+ *   - `cd` into a new area also advances 1 turn.
+ *
+ * A full day is 24 turns split into 4 equal phases:
+ *   Dawn (0-5)  Day (6-11)  Dusk (12-17)  Night (18-23)
+ *
+ * `accessRule(path, phase)` is the single source of truth for
+ * phase-gated areas (lab, archive). Keeping the rules here means
+ * cd-gating elsewhere is one line.
+ */
 
 const PHASES = [
   { name: 'dawn',  label: 'Dawn',  icon: '🌅', start: 0,  end: 6 },

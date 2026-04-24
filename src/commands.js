@@ -1,6 +1,18 @@
-// ============================================
-// Terminal Quest CLI - command dispatcher
-// ============================================
+/**
+ * @module commands
+ * @description Interactive command dispatcher.
+ *
+ * `CommandSystem.execute(line)` is the single entry point invoked by the
+ * readline loop in game.js. It:
+ *   1. records the command in `gameState.commandHistory`
+ *   2. expands aliases and history bangs (`!!`, `!<n>`)
+ *   3. routes to a per-verb `cmdXxx` handler
+ *   4. updates session-scoped counters used by achievements
+ *
+ * Handlers receive parsed args (string[]) and may print, mutate
+ * `this.game.gameState`, or return a Promise. They MUST NOT throw on user
+ * error — print a coloured error line and bail out instead.
+ */
 
 const { colors, HELP_TEXT, sleep, animations, applyTheme, padVisual, visualWidth } = require('./ui');
 const { EASTER_EGGS, NPCS, LEVELS, FILE_SYSTEM } = require('./data');
@@ -302,7 +314,8 @@ class CommandSystem {
       return;
     }
 
-    // level gates
+    // -------- gate checks (run BEFORE mutating currentPath) --------
+    // level gate: shadow realm
     if (targetPath === '/shadow/realm' || targetPath.startsWith('/shadow/realm/')) {
       if (this.game.gameState.level < 5) {
         console.log(colors.error(t('cd.locked.level', {
@@ -313,10 +326,8 @@ class CommandSystem {
         console.log(colors.dim(t('cd.hint.levelup')));
         return;
       }
-      if (!this.game.gameState.achievements.includes('shadow_walker')) {
-        this.game.unlockAchievement('shadow_walker').catch(() => {});
-      }
     }
+    // level gate: nexus
     if (targetPath === '/world/nexus' && this.game.gameState.level < 3) {
       console.log(colors.error(t('cd.locked.level', {
         area: '/world/nexus',
@@ -325,14 +336,21 @@ class CommandSystem {
       })));
       return;
     }
-
-    // phase-based access (lab/archive)
+    // phase-based access (lab/archive). Must run before path mutation
+    // so a denied access never leaks turn/visit side effects.
     const phase = this.game.getPhase();
     const rule = timeMod.accessRule(targetPath, phase);
     if (!rule.allowed) {
       console.log(colors.error(rule.reason));
       console.log(colors.dim('  tip: try `wait` to advance the day/night cycle.'));
       return;
+    }
+
+    // -------- all gates passed; commit the move --------
+    if (targetPath === '/shadow/realm' || targetPath.startsWith('/shadow/realm/')) {
+      if (!this.game.gameState.achievements.includes('shadow_walker')) {
+        this.game.unlockAchievement('shadow_walker').catch(() => {});
+      }
     }
 
     this.game.currentPath = targetPath;
@@ -917,7 +935,16 @@ Thank you for exploring.
       this.game.currentPath = this.game.gameState.currentPath || '/home/user';
       // reset in-memory achievements / quests then re-sync
       const { ACHIEVEMENTS, QUESTS } = require('./data');
-      this.game.achievements = JSON.parse(JSON.stringify(ACHIEVEMENTS));
+      const { EXTRA_ACHIEVEMENTS } = require('./achievements');
+      this.game.achievements = JSON.parse(
+        JSON.stringify({ ...ACHIEVEMENTS, ...EXTRA_ACHIEVEMENTS })
+      );
+      // JSON round-trip drops functions; re-attach the auto-unlock checkers.
+      for (const [id, src] of Object.entries(EXTRA_ACHIEVEMENTS)) {
+        if (this.game.achievements[id] && typeof src.check === 'function') {
+          this.game.achievements[id].check = src.check;
+        }
+      }
       this.game.quests = JSON.parse(JSON.stringify(QUESTS));
       this.game.syncAchievements();
       this.game.syncQuests();

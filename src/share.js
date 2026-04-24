@@ -1,8 +1,17 @@
-// ============================================
-// Terminal Quest CLI - shareable score cards
-// ============================================
-// The `share` command writes an ANSI-free ASCII art card to
-// ~/.terminal-quest/shares/ so the player can paste it on social media.
+/**
+ * @module share
+ * @description Shareable ASCII score cards.
+ *
+ * The `share` command writes a pure-ASCII (no ANSI escapes) framed card
+ * to `~/.terminal-quest/shares/card-<handle>-<timestamp>.txt` so the
+ * player can copy/paste it onto Twitter, GitHub, Reddit, etc.
+ *
+ * Each generation bumps `gameState.shareCount`, which feeds the
+ * `card_shark` achievement. The card renders: handle, level + title,
+ * total EXP, playtime, achievement progress, dirs visited, minigames
+ * played, alignment label, a randomised signature line and the
+ * `npx terminal-quest` install hint.
+ */
 
 const fs = require('fs');
 const path = require('path');

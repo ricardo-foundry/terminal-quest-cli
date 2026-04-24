@@ -1,8 +1,16 @@
-// ============================================
-// Terminal Quest CLI - Save/Load
-// ============================================
-// JSON saves with schema version. Multi-slot, stored under ~/.terminal-quest/saves/
-// Legacy single-file save at ~/.terminal-quest-save.json is auto-migrated.
+/**
+ * @module save
+ * @description Multi-slot JSON save/load with schemaVersion migrations.
+ *
+ * On-disk layout:
+ *   ~/.terminal-quest/saves/<slot>.json   -- one file per slot (v2 format)
+ *   ~/.terminal-quest-save.json           -- legacy v1 single-file save,
+ *                                            auto-migrated to default slot.
+ *
+ * Each save file is wrapped: { schemaVersion, slot, savedAt, state }.
+ * The `migrate()` helper bumps older payloads to the current schema so
+ * loading an old save never crashes the game.
+ */
 
 const fs = require('fs');
 const path = require('path');

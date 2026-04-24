@@ -1,8 +1,17 @@
-// ============================================
-// Terminal Quest CLI - i18n
-// ============================================
-// Lightweight locale system. Detects locale from env, allows runtime switch.
-// API: t(key, params?)  setLocale(code)  getLocale()  availableLocales()
+/**
+ * @module i18n
+ * @description Lightweight bilingual locale system (en / zh).
+ *
+ * Strings live in nested DICTS keyed by short dot-paths (e.g. `cmd.unknown`).
+ * `t(key, params?)` performs `{name}` substitution and falls back through
+ *   active-locale -> en -> the raw key.
+ *
+ * Locale detection order on boot:
+ *   1. explicit `--lang <code>` CLI flag
+ *   2. persisted `gameState.locale` from the active save
+ *   3. `process.env.LANG` (zh_CN.UTF-8 -> zh, fr_FR -> en fallback)
+ *   4. default 'en'
+ */
 
 const DICTS = {
   en: {

@@ -1,16 +1,27 @@
-# 开发文件
+# Editor / IDE
 .idea/
 .vscode/
 *.log
 npm-debug.log*
 
-# 测试文件
+# Tests (shipping these would bloat the tarball — `files` whitelist also excludes them)
+test/
 *.test.js
 coverage/
 
-# 文档（README 和 LICENSE 会通过 files 字段包含）
-docs/
+# Dev configs not useful at runtime
+.editorconfig
+.eslintrc.json
+.prettierrc.json
+.github/
+install.sh
+PUBLISH.md
 
-# 其他
+# OS noise
 .DS_Store
 Thumbs.db
+
+# Recordings (may grow large; demo.cast is opt-in)
+docs/demo.cast
+docs/*.gif
+docs/*.mp4

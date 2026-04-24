@@ -1,6 +1,18 @@
-// ============================================
-// Terminal Quest CLI - 游戏数据 (增强版)
-// ============================================
+/**
+ * @module data
+ * @description Static game world: virtual filesystem, achievements, NPCs,
+ *   quests, level table and easter eggs.
+ *
+ * Exports:
+ *   FILE_SYSTEM   — nested tree of dirs / files used by ls/cd/cat/find/grep
+ *   ACHIEVEMENTS  — base achievement table (extended in achievements.js)
+ *   QUESTS        — main-story quest definitions
+ *   LEVELS        — XP-to-level table with title and unlock notes
+ *   NPCS          — talkable NPCs with mood-aware dialog branches
+ *   EASTER_EGGS   — silly hidden commands (love, coffee, 42, ...)
+ *
+ * Pure data only — no side effects. All runtime logic lives elsewhere.
+ */
 
 const FILE_SYSTEM = {
   root: {

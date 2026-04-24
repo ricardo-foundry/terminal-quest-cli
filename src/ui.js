@@ -1,6 +1,18 @@
-// ============================================
-// Terminal Quest CLI - UI, colours, animations
-// ============================================
+/**
+ * @module ui
+ * @description Rendering primitives: colour palette, panels, boxes,
+ *   animated boot sequence, level-up + achievement popups.
+ *
+ * The `colors` object is a *live* palette — it is mutated in place by
+ * `applyTheme(name)` so other modules can keep a stable reference and
+ * still see palette changes after `theme retro`.
+ *
+ * All animations check `process.stdout.isTTY` and fall back to a single
+ * static line in non-interactive environments (CI, pipes).
+ *
+ * Visual-width helpers (`visualWidth`, `padVisual`) handle CJK and
+ * emoji as 2-column glyphs so framed boxes line up under Chinese text.
+ */
 
 const chalk = require('chalk');
 const { getTheme } = require('./themes');

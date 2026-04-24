@@ -1,7 +1,16 @@
-// ============================================
-// Terminal Quest CLI - Themes
-// ============================================
-// Provides colour palettes (via chalk) for dark / light / retro modes.
+/**
+ * @module themes
+ * @description Colour palettes (chalk-based) for dark / light / retro modes.
+ *
+ * Custom themes can be added by appending a new entry to `THEMES`. Each
+ * palette must implement: primary, secondary, accent, warning, error,
+ * success, info, dim, white, bold, gold, purple, orange.
+ *
+ * `chalk` autodetects terminal colour support and degrades gracefully:
+ *   - 256-colour / truecolor terminals get the exact hex tones (retro CRT)
+ *   - 16-colour terminals collapse to the nearest named ANSI colour
+ *   - non-TTY (CI, pipes) strips colour entirely.
+ */
 
 const chalk = require('chalk');
 

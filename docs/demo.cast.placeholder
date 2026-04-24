@@ -1,0 +1,47 @@
+# docs/demo.cast — placeholder
+
+The real `demo.cast` is an asciinema recording (~30s) embedded at the top of
+the README. Until it lands, this placeholder documents how to capture it so
+any maintainer can re-record without guesswork.
+
+## Capture command
+
+```bash
+# 1. Install asciinema once
+brew install asciinema      # macOS
+# or:  pipx install asciinema
+
+# 2. Record (Q1: ~30s, retro theme, no boot animation eats wall-clock)
+asciinema rec docs/demo.cast \
+  --title "Terminal Quest CLI — npx demo" \
+  --idle-time-limit 1.5 \
+  --overwrite \
+  --command "node bin/terminal-quest.js --no-boot --theme retro"
+
+# 3. Inside the session, type the script in docs/session-transcript.md
+#    (about 12 commands, ends with `exit`).
+
+# 4. Validate locally
+asciinema play docs/demo.cast
+
+# 5. (Optional) upload to asciinema.org for the README badge
+asciinema upload docs/demo.cast
+```
+
+## README embed
+
+Once the cast is committed, replace the placeholder block in README.md with:
+
+```markdown
+[![asciicast](https://asciinema.org/a/<id>.svg)](https://asciinema.org/a/<id>)
+```
+
+## Who records it
+
+Whoever cuts the next `v2.x` release tag. Add `[ ] record demo.cast` to the
+release checklist in `docs/RELEASING.md`.
+
+## Why a separate file
+
+`*.cast` is a JSON timing format — committing a placeholder text file keeps
+the repo lean and lets `npm publish` ship `docs/` without binary churn.

@@ -1,8 +1,20 @@
-// ============================================
-// Terminal Quest CLI - minigames
-// ============================================
-// All games return a structured result object:
-//   { completed: bool, win?: bool, score?: number, attempts?: number }
+/**
+ * @module minigames
+ * @description The 8 in-game minigames plus pure helpers used by tests.
+ *
+ * Games:
+ *   snake, guess, matrix, pong, wordle, qte, logicPuzzle, morse
+ *
+ * Each game returns a Promise that resolves to:
+ *   { completed: bool, win?: bool, score?: number, attempts?: number }
+ *
+ * Pure (testable, side-effect-free) helpers exported alongside:
+ *   scoreGuess(target, guess)         — Wordle-style green/yellow/grey marks
+ *   evaluateCircuit(circuit, env)     — runs a chain of logic gates
+ *   solveCircuit(circuit, vars, t, v) — brute-force SAT for the puzzle
+ *   morseEncode(text) / morseDecode(code) — round-trip safe, multi-word
+ *   MORSE_MAP, LOGIC_GATES            — lookup tables
+ */
 
 const readline = require('readline');
 const { colors, sleep } = require('./ui');

@@ -1,6 +1,17 @@
-// ============================================
-// Terminal Quest CLI - main game loop
-// ============================================
+/**
+ * @module game
+ * @description Top-level orchestrator: state, save/load, prompt loop.
+ *
+ * `TerminalGame`:
+ *   - merges DEFAULT_STATE with the loaded save into `gameState`
+ *   - re-attaches achievement `check` fns lost across JSON round-trip
+ *   - drives the readline loop, dispatches each line via CommandSystem
+ *   - persists state on every unlock and on graceful exit (SIGINT/SIGTERM)
+ *
+ * `DEFAULT_STATE` is the canonical schema for v2 saves; new fields added
+ * here are automatically picked up by old saves at load time via the
+ * spread merge in `loadGameState()`.
+ */
 
 const readline = require('readline');
 const { colors, bootSequence, showAchievement, showLevelUp, applyTheme } = require('./ui');
