@@ -21,7 +21,50 @@
 
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const saveMod = require('./save');
+
+// ----- slot -> gistId map ("update in place" persistence) -----
+// We persist a tiny JSON mapping inside ~/.terminal-quest/cloud-meta.json so
+// repeated `--cloud push <slot>` calls PATCH the same gist instead of
+// littering the user's account with a fresh gist per save.
+const META_PATH = path.join(saveMod.BASE_DIR, 'cloud-meta.json');
+
+/**
+ * Read the slot->gistId mapping from disk. Tolerates a missing or
+ * malformed file by returning an empty object.
+ *
+ * @returns {{ gist?: Object<string, string> }}
+ */
+function readMeta() {
+  try {
+    if (!fs.existsSync(META_PATH)) return { gist: {} };
+    const raw = fs.readFileSync(META_PATH, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return { gist: {} };
+    if (!parsed.gist || typeof parsed.gist !== 'object') parsed.gist = {};
+    return parsed;
+  } catch (_) {
+    return { gist: {} };
+  }
+}
+
+/**
+ * Persist the slot->gistId mapping. Best-effort: failures are swallowed.
+ *
+ * @param {object} meta
+ */
+function writeMeta(meta) {
+  try {
+    if (!fs.existsSync(saveMod.BASE_DIR)) {
+      fs.mkdirSync(saveMod.BASE_DIR, { recursive: true });
+    }
+    fs.writeFileSync(META_PATH, JSON.stringify(meta, null, 2));
+  } catch (_) {
+    /* ignore */
+  }
+}
 
 // --------- generic backend contract ---------
 /**
@@ -116,21 +159,57 @@ class GistBackend extends CloudBackend {
     if (!json) return { ok: false, error: `no save in slot "${slot}"` };
     const files = {};
     files[this._filename(slot)] = { content: json };
-    const body = JSON.stringify({
-      description: `terminal-quest save for slot "${slot}"`,
-      public: false,
-      files
-    });
+
+    // If we already pushed this slot before, PATCH the same gist so the
+    // user's gist list does not grow on every save.
+    const meta = readMeta();
+    const knownId = meta.gist && meta.gist[slot];
     let res;
-    try {
-      res = await this.fetch({ method: 'POST', url: GIST_API, token: this.token, body });
-    } catch (e) {
-      return { ok: false, error: `network error: ${e.message}` };
+    if (knownId) {
+      const body = JSON.stringify({
+        description: `terminal-quest save for slot "${slot}"`,
+        files
+      });
+      try {
+        res = await this.fetch({
+          method: 'PATCH',
+          url: `${GIST_API}/${knownId}`,
+          token: this.token,
+          body
+        });
+      } catch (e) {
+        return { ok: false, error: `network error: ${e.message}` };
+      }
+      // 404 = gist deleted on the remote; fall through to create-fresh.
+      if (res && res.status === 404) {
+        delete meta.gist[slot];
+        writeMeta(meta);
+        res = null;
+      }
     }
+
+    if (!res) {
+      const body = JSON.stringify({
+        description: `terminal-quest save for slot "${slot}"`,
+        public: false,
+        files
+      });
+      try {
+        res = await this.fetch({ method: 'POST', url: GIST_API, token: this.token, body });
+      } catch (e) {
+        return { ok: false, error: `network error: ${e.message}` };
+      }
+    }
+
     if (res.status >= 200 && res.status < 300) {
       let parsed;
       try { parsed = JSON.parse(res.body); } catch (_) { parsed = {}; }
-      return { ok: true, id: parsed.id, url: parsed.html_url };
+      // Remember the gist id so the next push updates instead of creates.
+      if (parsed.id) {
+        meta.gist[slot] = parsed.id;
+        writeMeta(meta);
+      }
+      return { ok: true, id: parsed.id, url: parsed.html_url, updated: !!knownId };
     }
     return { ok: false, error: `gist api returned ${res.status}` };
   }
@@ -221,5 +300,9 @@ class MemoryBackend extends CloudBackend {
 module.exports = {
   CloudBackend,
   GistBackend,
-  MemoryBackend
+  MemoryBackend,
+  // exposed for tests + CLI introspection
+  readMeta,
+  writeMeta,
+  META_PATH
 };

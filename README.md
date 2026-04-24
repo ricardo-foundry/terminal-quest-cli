@@ -25,6 +25,8 @@
 
 <div align="center">
 
+<img src="./docs/terminal-demo.svg" alt="Animated terminal demo: boot, ls, cd /world/lab, talk engineer, decode cipher, level up." width="780"/>
+
 ### Try it right now — no install needed
 
 ```bash

@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-04-25
+
+### Added (v2.5 reflection + polish)
+- `docs/RELEASE_v2.5.md` — full v1.0 → v2.5 timeline and publish
+  checklist for maintainers.
+- `docs/REPO_SETTINGS.md` — checklist of every GitHub repo setting
+  (about box, topics, branch protection, social card, secrets) that
+  has to be configured before tagging the first public release.
+- `docs/GOOD_FIRST_ISSUES.md` — 10 ready-to-file
+  `good-first-issue` templates spanning translations, quests, NPCs,
+  achievements, themes, minigames and easter eggs.
+- `docs/terminal-demo.svg` — pure-SVG, dependency-free,
+  `<animate>`-driven 12-second / 4-scene terminal demo. Embedded at
+  the top of `README.md` so the npm and GitHub previews show
+  motion. Renders inline on github.com without any rasterisation.
+- `scripts/record-session.js` — generator for `terminal-demo.svg`.
+  Edit the `SCENES` table at the top of the file and re-run; pass
+  `--check` for CI to fail when the asset is stale.
+- `src/cloud.js#readMeta` / `writeMeta` and a per-host
+  `~/.terminal-quest/cloud-meta.json` slot → gist-id mapping so
+  `--cloud push <slot>` updates an existing gist rather than
+  creating a new one each call. A 404 on the cached id falls
+  through to a fresh POST and rewrites the cache.
+- `src/game.js#reloadCommunityQuests` and `_startQuestWatcher` —
+  `--dev` now `fs.watch`es `quests/` (recursive, 150 ms coalesce)
+  and reloads the pack on change. Falls back to a no-op on
+  platforms without recursive watch.
+- 5 new tests (171 -> 176): `test/cloud.test.js` gains 3
+  (update-in-place via PATCH, PATCH->404 POST fallover, corrupt
+  meta tolerance), `test/quests.test.js` gains a hot-reload
+  simulation against a tmp dir, and `test/save.test.js` gains an
+  end-to-end `--new` `.bak` test that drives the bin via
+  `execSync`.
+
+### Changed
+- `bin/terminal-quest.js#archiveSlot` now copies the slot to
+  `<slot>.json.bak` before renaming it to the timestamped archive,
+  so an accidental `--new` is recoverable without scanning for the
+  timestamp.
+- `src/game.js`: `minAlignment` is no longer re-seeded to the
+  current alignment on every fresh process. A new
+  `minAlignmentInit` boolean lives in the save envelope and gates
+  the seeding to exactly once per save. The pacifist achievement
+  now respects history across restarts.
+- `package.json` bumps to `2.5.0`. No new runtime dependencies.
+- `README.md` references `docs/terminal-demo.svg` directly under
+  the badge row.
+
+### Fixed
+- Cloud sync no longer pollutes a user's gist account with one
+  fresh gist per `push` cycle.
+- Pacifist achievement could be silently un-earned by a load+save
+  cycle that re-seeded `minAlignment` to a higher value.
+- `--new` previously left the player one timestamped file with no
+  obvious "latest" copy; the new `.bak` solves that.
+
 ## [2.4.0] - 2026-04-25
 
 ### Added (v2.4 quests & launch prep)
@@ -242,7 +298,8 @@ testable `src/` module tree and ships a real `bin/` CLI.
 - Hidden-file discovery mechanic.
 - Early achievement prototype.
 
-[Unreleased]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v2.0.0...v2.2.0

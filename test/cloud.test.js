@@ -133,3 +133,65 @@ test('GistBackend pull: returns error when slot not in cloud list', async () => 
   assert.equal(r.ok, false);
   assert.ok(/no cloud save/.test(r.error));
 });
+
+// ---- v2.5: update-in-place via slot->gistId mapping ----
+test('GistBackend push: second push for same slot uses PATCH on the cached gist id', async () => {
+  // Use a fresh slot so this test is independent of earlier ones.
+  saveMod.save('uipslot', { level: 1 });
+  const calls = [];
+  const fakeFetch = async (opts) => {
+    calls.push({ method: opts.method, url: opts.url });
+    if (opts.method === 'POST') {
+      return { status: 201, body: JSON.stringify({ id: 'first-id', html_url: 'u1' }) };
+    }
+    // PATCH path
+    return { status: 200, body: JSON.stringify({ id: 'first-id', html_url: 'u1' }) };
+  };
+  const g = new GistBackend({ token: 'tok', fetch: fakeFetch });
+  const a = await g.push('uipslot');
+  assert.equal(a.ok, true);
+  assert.equal(a.updated, false);
+  const b = await g.push('uipslot');
+  assert.equal(b.ok, true);
+  assert.equal(b.updated, true);
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].method, 'POST');
+  assert.equal(calls[1].method, 'PATCH');
+  assert.ok(calls[1].url.endsWith('/first-id'));
+});
+
+test('GistBackend push: 404 on PATCH falls back to POST and re-creates the gist', async () => {
+  // Pre-seed the meta so push thinks a gist already exists.
+  saveMod.save('falloverslot', { level: 1 });
+  const cloudMod = require('../src/cloud');
+  const meta = cloudMod.readMeta();
+  meta.gist = meta.gist || {};
+  meta.gist.falloverslot = 'gone-id';
+  cloudMod.writeMeta(meta);
+
+  const seenMethods = [];
+  const fakeFetch = async (opts) => {
+    seenMethods.push(opts.method);
+    if (opts.method === 'PATCH') return { status: 404, body: '{"message":"Not Found"}' };
+    return { status: 201, body: JSON.stringify({ id: 'fresh-id', html_url: 'u' }) };
+  };
+  const g = new GistBackend({ token: 'tok', fetch: fakeFetch });
+  const r = await g.push('falloverslot');
+  assert.equal(r.ok, true);
+  assert.equal(r.id, 'fresh-id');
+  assert.deepEqual(seenMethods, ['PATCH', 'POST']);
+  // meta should now point at the new id
+  const after = cloudMod.readMeta();
+  assert.equal(after.gist.falloverslot, 'fresh-id');
+});
+
+test('readMeta returns empty mapping when file is absent or corrupt', () => {
+  const cloudMod = require('../src/cloud');
+  // Corrupt the meta file
+  fs.writeFileSync(cloudMod.META_PATH, '{ not json');
+  const m = cloudMod.readMeta();
+  assert.ok(m.gist);
+  assert.equal(typeof m.gist, 'object');
+  // Restore by writing valid json so other tests aren't perturbed
+  cloudMod.writeMeta({ gist: {} });
+});

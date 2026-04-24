@@ -145,3 +145,31 @@ test('deleteSlot removes file, returns false on missing', () => {
   assert.equal(saveMod.deleteSlot('dmtest'), true);
   assert.equal(saveMod.deleteSlot('dmtest'), false);
 });
+
+// ---- v2.5: --new keeps a .bak copy alongside the timestamped archive ----
+test('--new archives the slot AND leaves a .bak so an oops is recoverable', () => {
+  const { execSync } = require('node:child_process');
+  const BIN = path.join(__dirname, '..', 'bin', 'terminal-quest.js');
+  // Seed a slot in the temp HOME so the bin sees it.
+  const slot = 'newbaktest';
+  saveMod.save(slot, { level: 9, exp: 9999 });
+  const slotFile = saveMod.slotPath(slot);
+  assert.ok(fs.existsSync(slotFile));
+
+  // Ask the bin to wipe + restart; pipe a quick "exit" so the REPL closes.
+  const env = { ...process.env, HOME: TMP_HOME, USERPROFILE: TMP_HOME };
+  try {
+    execSync(`echo "exit" | node "${BIN}" --slot ${slot} --new --no-boot --no-color`, {
+      env, stdio: ['pipe', 'pipe', 'pipe'], timeout: 8000
+    });
+  } catch (_) {
+    // Ignore: the bin may exit non-zero from EPIPE/SIGPIPE on some platforms.
+  }
+  // The .bak copy should exist; the original .json may have been recreated
+  // by the launching session, but the archived-* file must also be present.
+  assert.ok(fs.existsSync(slotFile + '.bak'),
+    `expected ${slotFile}.bak to exist after --new`);
+  const dirEntries = fs.readdirSync(saveMod.SAVE_DIR);
+  assert.ok(dirEntries.some((f) => f.startsWith(slot + '.json.archived-')),
+    'expected an .archived-* sibling');
+});

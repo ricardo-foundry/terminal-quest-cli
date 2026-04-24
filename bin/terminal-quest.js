@@ -225,9 +225,15 @@ function archiveSlot(slot) {
     const saveMod = require('../src/save');
     const p = saveMod.slotPath(slot || saveMod.DEFAULT_SLOT);
     if (fs.existsSync(p)) {
+      // v2.5: write a .bak alongside the archive so an oops `--new` is
+      // recoverable with a known-name copy regardless of the timestamp.
+      try {
+        fs.copyFileSync(p, p + '.bak');
+      } catch (_) { /* best effort */ }
       const dest = p + '.archived-' + Date.now();
       fs.renameSync(p, dest);
       console.log(`archived previous slot -> ${dest}`);
+      console.log(`(latest copy also kept at ${p}.bak)`);
     }
   } catch {
     /* ignore */

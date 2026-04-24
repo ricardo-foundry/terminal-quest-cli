@@ -67,6 +67,9 @@ const DEFAULT_STATE = {
   // v2.4 additions
   replay: [],
   minAlignment: 0,
+  // v2.5: persisted alongside minAlignment so a fresh process never
+  // re-seeds the running minimum back to "current alignment" on load.
+  minAlignmentInit: false,
   questPackTotal: 0,
   questPackDone: 0,
   communityQuestState: {}
@@ -102,9 +105,67 @@ class TerminalGame {
     }
     this.replay = new ReplayRecorder(this.gameState);
 
+    // v2.5 dev mode: hot-reload community quests when files change.
+    if (this.options.dev) {
+      this._startQuestWatcher();
+    }
+
     // apply persisted preferences
     if (this.gameState.locale) setLocale(this.gameState.locale);
     applyTheme(this.gameState.theme || 'dark');
+  }
+
+  /**
+   * Re-scan the quests directory and replace the in-memory pack.
+   * Returns the new count and any per-file errors. Used by `--dev`
+   * hot-reload and by future in-game `:reload-quests` commands.
+   *
+   * @returns {{ count:number, failed:number }}
+   */
+  reloadCommunityQuests() {
+    try {
+      const loaded = questsMod.reloadQuests();
+      this.communityQuests = loaded.quests;
+      this.questReport = loaded.report;
+      this.gameState.questPackTotal = this.communityQuests.length;
+      const failed = loaded.report.filter((r) => !r.ok).length;
+      return { count: this.communityQuests.length, failed };
+    } catch (_) {
+      return { count: 0, failed: 0 };
+    }
+  }
+
+  /**
+   * Watch the quests/ directory in --dev mode and reload on change.
+   * fs.watch is best-effort across platforms; failures are logged but
+   * never crash the game.
+   */
+  _startQuestWatcher() {
+    const fs = require('fs');
+    const dir = questsMod.DEFAULT_QUESTS_DIR;
+    if (!fs.existsSync(dir)) return;
+    try {
+      // Coalesce bursts of fs events (editors save with multiple writes).
+      let pending = null;
+      this._questWatcher = fs.watch(dir, { recursive: true }, () => {
+        if (pending) clearTimeout(pending);
+        pending = setTimeout(() => {
+          pending = null;
+          const r = this.reloadCommunityQuests();
+          // Use a quiet log so we don't blow up the prompt; errors only.
+          if (colors && colors.dim) {
+            console.log();
+            console.log(colors.dim(`[dev] reloaded ${r.count} quest(s)` + (r.failed ? `, ${r.failed} failed` : '')));
+            if (this.rl) this.rl.prompt();
+          }
+        }, 150);
+      });
+      if (this._questWatcher && typeof this._questWatcher.on === 'function') {
+        this._questWatcher.on('error', () => { /* ignore */ });
+      }
+    } catch (_) {
+      /* recursive watch unsupported on this platform - silently skip */
+    }
   }
 
   /**
@@ -390,13 +451,16 @@ class TerminalGame {
       this.gameState.explorationLevel = Math.max(this.gameState.explorationLevel, 5);
     }
     // v2.4: track min alignment seen so pacifist can tell.
-    // On first run (or post-load without the field) we seed to the current
-    // alignment rather than the default 0, otherwise a player whose
-    // alignment briefly rose to +2 would record min=0 instead of +2.
+    // v2.5: the init flag is persisted in the save envelope
+    // (`minAlignmentInit`) so reopening the game does not re-seed the
+    // minimum to the current alignment. The first time we see the field
+    // we seed to current; thereafter we only ratchet downward.
     const cur = Number(this.gameState.alignment) || 0;
-    if (typeof this.gameState.minAlignment !== 'number' || this._minAlignInit !== true) {
+    if (this.gameState.minAlignmentInit !== true) {
       this.gameState.minAlignment = cur;
-      this._minAlignInit = true;
+      this.gameState.minAlignmentInit = true;
+    } else if (typeof this.gameState.minAlignment !== 'number') {
+      this.gameState.minAlignment = cur;
     } else if (cur < this.gameState.minAlignment) {
       this.gameState.minAlignment = cur;
     }

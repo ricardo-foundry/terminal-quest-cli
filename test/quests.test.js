@@ -197,6 +197,62 @@ test('reloadQuests is an alias and behaves identically', () => {
                    b.quests.map((q) => q.id).sort());
 });
 
+test('reloadQuests picks up newly added quest folders (hot-reload)', () => {
+  // v2.5: --dev hot-reload depends on a fresh scan returning the latest
+  // contents of the quests directory. We simulate the workflow against a
+  // tmp dir to avoid touching the real ./quests pack.
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'tq-hotreload-'));
+  try {
+    // First scan: empty directory.
+    const empty = reloadQuests(tmp);
+    assert.equal(empty.quests.length, 0);
+
+    // Drop a new quest in.
+    const qid = 'fresh-quest';
+    fs.mkdirSync(path.join(tmp, qid));
+    fs.writeFileSync(
+      path.join(tmp, qid, 'quest.json'),
+      JSON.stringify({
+        schemaVersion: 1,
+        id: qid,
+        title: 'Fresh',
+        description: 'added at runtime',
+        steps: [
+          { id: 'a', description: 'go', triggers: [{ type: 'level', min: 1 }] }
+        ]
+      })
+    );
+
+    // Re-scan returns the new quest.
+    const after = reloadQuests(tmp);
+    assert.equal(after.quests.length, 1);
+    assert.equal(after.quests[0].id, qid);
+
+    // Mutate the quest file - title change must be reflected on next reload.
+    fs.writeFileSync(
+      path.join(tmp, qid, 'quest.json'),
+      JSON.stringify({
+        schemaVersion: 1,
+        id: qid,
+        title: 'Edited',
+        description: 'updated',
+        steps: [
+          { id: 'a', description: 'go', triggers: [{ type: 'level', min: 1 }] }
+        ]
+      })
+    );
+    const edited = reloadQuests(tmp);
+    assert.equal(edited.quests[0].title, 'Edited');
+
+    // Removing the file makes the next reload drop the quest.
+    fs.rmSync(path.join(tmp, qid), { recursive: true, force: true });
+    const removed = reloadQuests(tmp);
+    assert.equal(removed.quests.length, 0);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
 test('pickBranch chooses the first condition that matches, else default', () => {
   const branches = {
     kind: { condition: 'alignment >= 3', text: 'k' },
