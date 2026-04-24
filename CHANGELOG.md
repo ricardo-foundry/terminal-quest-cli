@@ -1,42 +1,69 @@
 # Changelog
 
-所有版本的变更记录都在此文件中。
+All notable changes to this project will be documented in this file.
 
-格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
-并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- GitHub issue and pull request templates, CI matrix across Node 18/20/22 on
+  Ubuntu, macOS and Windows.
+- `publish-npm.yml` workflow that publishes tagged releases to the npm registry
+  with npm provenance.
+- `CODE_OF_CONDUCT.md`, `SECURITY.md`, `.editorconfig`, `.prettierrc.json` and a
+  minimal `.eslintrc.json`.
+- Dependabot config for npm and GitHub Actions dependencies.
+- `docs/` directory with `COMMANDS.md` and `SAVE_FORMAT.md` references.
+- README rewritten in an open-source friendly style with badges, feature list,
+  CLI flags table and a Chinese quick reference.
+
+### Changed
+- `CHANGELOG.md` now follows the Keep a Changelog structure with version
+  deltas from `v1.0.0` to `v2.0.0` and an Unreleased section.
 
 ## [2.0.0] - 2026-02-14
 
-### 🎉 新增
-- 全新的 RPG 等级系统，7个等级从新手到 KIMI 的伙伴
-- 18个成就系统，解锁获得 EXP 奖励
-- 12个主线任务引导剧情
-- 5个迷你游戏：贪吃蛇、猜数字、矩阵雨、乒乓球、Wordle
-- NPC 对话系统，与向导 AI 和商人 AI 互动
-- 背包系统，收集特殊物品
-- 自动存档功能
+This is a large rewrite that splits the monolithic entry file into a small,
+testable `src/` module tree and ships a real `bin/` CLI.
 
-### 🎮 游戏内容
-- 5个可探索区域：家目录、系统核心、世界枢纽、交易站、暗影领域
-- 丰富的文件系统，包含隐藏文件和加密信息
-- 3个密钥片段等待收集
-- 终极秘密等待解锁
+### Added
+- Modular `src/` layout: `game.js`, `commands.js`, `data.js`, `ui.js`,
+  `minigames.js`, `i18n.js`, `save.js`, `themes.js`.
+- Multi-slot save system stored under `~/.terminal-quest/saves/*.json` with a
+  `schemaVersion` field and automatic migration from the legacy single-file
+  save.
+- Bilingual UI (English / Chinese) selectable at runtime or via `--lang`.
+- Theme engine with `dark`, `light` and `retro` presets, switchable in-game or
+  via `--theme`.
+- 18 achievements that grant EXP on unlock, a 7-tier level progression and an
+  inventory for key fragments and quest items.
+- 5 minigames: snake, guess-the-number, matrix-rain, pong and a Wordle clone.
+- 12 main-story quests, guide / merchant NPC dialogues and an endgame secret.
+- 5 explorable zones with hidden files, encrypted notes and three key shards.
+- Node's built-in test runner: 24 tests covering commands, i18n, minigames,
+  game state and the save subsystem.
+- `bin/terminal-quest.js` entry point with `terminal-quest`, `tq` and
+  `adventure` binaries.
+- `CONTRIBUTING.md` with setup, architecture and testing guidance.
 
-### 🔧 技术
-- 使用 chalk 实现彩色终端输出
-- 使用 figlet 实现 ASCII 艺术标题
-- 支持键盘事件处理（方向键、WASD）
-- 非 TTY 环境降级显示
+### Changed
+- `package.json` bumped to `2.0.0`, `engines.node` pinned to `>=14.0.0`, and
+  `files` narrowed to `bin/`, `src/`, `README.md`, `LICENSE` for a smaller tarball.
 
-### 📝 文档
-- 完善的中文 README
-- 详细的命令说明
-- 游戏目标指引
+### Fixed
+- Non-TTY environments (CI, pipes) now degrade gracefully instead of crashing
+  on `process.stdin.setRawMode`.
 
 ## [1.0.0] - 2026-02-01
 
-### 🎉 初始版本
-- 基础的终端文件系统探索
-- ls, cd, cat, pwd 等基本命令
-- 简单的隐藏文件发现机制
-- 成就系统雏形
+### Added
+- First public release.
+- Terminal filesystem explorer with `ls`, `cd`, `cat`, `pwd` and friends.
+- Hidden-file discovery mechanic.
+- Early achievement prototype.
+
+[Unreleased]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/Ricardo-M-L/terminal-quest-cli/compare/v1.0.0...v2.0.0
+[1.0.0]: https://github.com/Ricardo-M-L/terminal-quest-cli/releases/tag/v1.0.0

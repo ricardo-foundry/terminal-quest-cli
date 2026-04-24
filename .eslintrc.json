@@ -1,0 +1,17 @@
+{
+  "root": true,
+  "env": {
+    "node": true,
+    "es2022": true
+  },
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "script"
+  },
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-undef": "error",
+    "no-constant-condition": ["warn", { "checkLoops": false }]
+  },
+  "ignorePatterns": ["node_modules/", "docs/", ".github/"]
+}
