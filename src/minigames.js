@@ -495,4 +495,263 @@ async function wordle(game) {
   });
 }
 
-module.exports = { snake, guess, matrix, pong, wordle, scoreGuess };
+// --- Reaction QTE ---
+// Press the shown key within `window` ms. Three rounds, count hits.
+async function qte(game, opts = {}) {
+  const window = opts.window || 1200;
+  const rounds = opts.rounds || 3;
+  const keys = 'ASDFJKL;'.split('');
+
+  console.clear();
+  console.log(colors.bold('Reaction QTE'));
+  console.log(colors.dim(`Press the shown key within ${window}ms. ${rounds} rounds.`));
+  console.log();
+
+  let hits = 0;
+  for (let r = 1; r <= rounds; r++) {
+    const target = keys[Math.floor(Math.random() * keys.length)];
+    console.log(colors.warning(`Round ${r}/${rounds} -> press ${colors.bold(target)} now!`));
+    const start = Date.now();
+    const result = await new Promise((resolve) => {
+      let resolved = false;
+      const cleanup = setupKeyListener((key) => {
+        if (resolved) return;
+        resolved = true;
+        cleanup();
+        resolve({ key, elapsed: Date.now() - start });
+      });
+      setTimeout(() => {
+        if (resolved) return;
+        resolved = true;
+        cleanup();
+        resolve({ key: null, elapsed: window + 1 });
+      }, window);
+    });
+    if (result.key && result.key.toUpperCase() === target.toUpperCase() && result.elapsed <= window) {
+      hits++;
+      console.log(colors.success(`  hit (${result.elapsed}ms)`));
+    } else {
+      console.log(colors.error(`  miss (pressed: ${result.key || 'nothing'})`));
+    }
+  }
+
+  const win = hits === rounds;
+  if (win) {
+    console.log(colors.success(`clean sweep ${hits}/${rounds}`));
+    console.log(colors.gold('+60 EXP'));
+    if (game && game.addExp) game.addExp(60, 'qte').catch(() => {});
+    if (game && game.gameState) game.gameState.qteWon = true;
+  } else {
+    const exp = hits * 10;
+    console.log(colors.warning(`score: ${hits}/${rounds}`));
+    if (exp > 0) {
+      console.log(colors.gold(`+${exp} EXP`));
+      if (game && game.addExp) game.addExp(exp, 'qte').catch(() => {});
+    }
+  }
+  return { completed: true, win, score: hits };
+}
+
+// --- Logic circuit puzzle ---
+// A tiny boolean-circuit solver: given gate list + truth expectation, ask player
+// which inputs (A..) satisfy. Pure evaluator is exported for tests.
+const LOGIC_GATES = {
+  AND: (a, b) => !!(a && b),
+  OR:  (a, b) => !!(a || b),
+  XOR: (a, b) => !!(a) !== !!(b),
+  NAND: (a, b) => !(a && b),
+  NOR: (a, b) => !(a || b)
+};
+
+function evaluateCircuit(circuit, inputs) {
+  // circuit: array of { op, in: [name|bool, name|bool], out: name }
+  // inputs: { A: bool, B: bool, ... }
+  const env = { ...inputs };
+  for (const step of circuit) {
+    const a = typeof step.in[0] === 'string' ? env[step.in[0]] : step.in[0];
+    const b = typeof step.in[1] === 'string' ? env[step.in[1]] : step.in[1];
+    const fn = LOGIC_GATES[step.op];
+    if (!fn) throw new Error('unknown gate: ' + step.op);
+    env[step.out] = fn(a, b);
+  }
+  return env;
+}
+
+// find the unique input assignment that yields target for `outVar`, or null.
+function solveCircuit(circuit, inputNames, outVar, target) {
+  const n = inputNames.length;
+  const total = 1 << n;
+  const hits = [];
+  for (let mask = 0; mask < total; mask++) {
+    const inputs = {};
+    inputNames.forEach((name, i) => { inputs[name] = !!((mask >> i) & 1); });
+    const env = evaluateCircuit(circuit, inputs);
+    if (!!env[outVar] === !!target) hits.push(inputs);
+  }
+  return hits;
+}
+
+async function logicPuzzle(game) {
+  // Three-input circuit with known unique solution.
+  const circuit = [
+    { op: 'AND', in: ['A', 'B'], out: 'X' },
+    { op: 'XOR', in: ['X', 'C'], out: 'Y' },
+    { op: 'OR',  in: ['Y', 'A'], out: 'Z' }
+  ];
+  const inputs = ['A', 'B', 'C'];
+
+  console.clear();
+  console.log(colors.bold('Logic circuit'));
+  console.log(colors.dim('Find input values A, B, C (0/1) so that Z = true AND Y = false.'));
+  console.log(colors.dim('Circuit:'));
+  console.log('  X = A AND B');
+  console.log('  Y = X XOR C');
+  console.log('  Z = Y OR A');
+  console.log();
+  console.log(colors.dim('Enter answer as three digits, e.g. 101 (type q to quit)'));
+  console.log();
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  let attempts = 0;
+  const maxAttempts = 4;
+
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (r) => {
+      if (done) return;
+      done = true;
+      rl.close();
+      resolve(r);
+    };
+    const ask = () => {
+      if (done) return;
+      if (attempts >= maxAttempts) {
+        console.log(colors.error('out of tries'));
+        finish({ completed: true, win: false, attempts });
+        return;
+      }
+      rl.question(colors.bold(`guess ${attempts + 1}/${maxAttempts}: `), (input) => {
+        if (done) return;
+        const s = (input || '').trim().toLowerCase();
+        if (s === 'q' || s === 'quit') { finish({ completed: false, win: false, attempts }); return; }
+        if (!/^[01]{3}$/.test(s)) {
+          console.log(colors.error('please enter three bits (0 or 1)'));
+          ask();
+          return;
+        }
+        attempts++;
+        const guess = { A: s[0] === '1', B: s[1] === '1', C: s[2] === '1' };
+        const env = evaluateCircuit(circuit, guess);
+        console.log(colors.dim(`  X=${env.X ? 1 : 0}  Y=${env.Y ? 1 : 0}  Z=${env.Z ? 1 : 0}`));
+        if (env.Z === true && env.Y === false) {
+          console.log(colors.success('circuit solved'));
+          console.log(colors.gold('+80 EXP'));
+          if (game && game.addExp) game.addExp(80, 'logic').catch(() => {});
+          if (game && game.gameState) game.gameState.logicSolved = true;
+          finish({ completed: true, win: true, attempts });
+          return;
+        }
+        console.log(colors.warning('not yet'));
+        ask();
+      });
+    };
+    rl.on('close', () => finish({ completed: false, win: false, attempts }));
+    ask();
+  });
+}
+// make sure there is at least one such assignment (A=1,B=0,C=0 -> X=0,Y=0,Z=1 works)
+
+// --- Morse decode ---
+const MORSE_MAP = {
+  'A': '.-',  'B': '-...','C': '-.-.','D': '-..', 'E': '.',   'F': '..-.',
+  'G': '--.', 'H': '....','I': '..',  'J': '.---','K': '-.-', 'L': '.-..',
+  'M': '--',  'N': '-.',  'O': '---', 'P': '.--.','Q': '--.-','R': '.-.',
+  'S': '...', 'T': '-',   'U': '..-', 'V': '...-','W': '.--', 'X': '-..-',
+  'Y': '-.--','Z': '--..',
+  '0': '-----','1': '.----','2': '..---','3': '...--','4': '....-',
+  '5': '.....','6': '-....','7': '--...','8': '---..','9': '----.'
+};
+
+function morseEncode(text) {
+  return String(text).toUpperCase().split(' ').map((word) => {
+    return word.split('').map((ch) => MORSE_MAP[ch] || '').filter(Boolean).join(' ');
+  }).join('   ');
+}
+
+function morseDecode(code) {
+  const rev = {};
+  for (const [k, v] of Object.entries(MORSE_MAP)) rev[v] = k;
+  return String(code).split('   ').map((word) => {
+    return word.split(' ').map((sym) => rev[sym] || '').join('');
+  }).join(' ');
+}
+
+async function morse(game) {
+  const words = ['KIMI', 'AWAKE', 'NEXUS', 'SHADOW', 'EXPLORE', 'SECRET'];
+  const answer = words[Math.floor(Math.random() * words.length)];
+  const encoded = morseEncode(answer);
+
+  console.clear();
+  console.log(colors.bold('Morse decode'));
+  console.log(colors.dim('Decode the message (single word). Type q to quit.'));
+  console.log();
+  console.log('  ' + colors.info(encoded));
+  console.log();
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  let attempts = 0;
+  const maxAttempts = 3;
+  let hintsUsed = 0;
+
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (r) => {
+      if (done) return;
+      done = true;
+      rl.close();
+      resolve(r);
+    };
+    const ask = () => {
+      if (done) return;
+      if (attempts >= maxAttempts) {
+        console.log(colors.error(`out of tries - answer: ${answer}`));
+        finish({ completed: true, win: false, attempts });
+        return;
+      }
+      rl.question(colors.bold(`answer ${attempts + 1}/${maxAttempts} (or 'hint'): `), (input) => {
+        if (done) return;
+        const s = (input || '').trim().toUpperCase();
+        if (s === 'Q' || s === 'QUIT') { finish({ completed: false, win: false, attempts }); return; }
+        if (s === 'HINT' || s === 'H') {
+          hintsUsed++;
+          console.log(colors.dim(`hint: first letter is "${answer[0]}" (${MORSE_MAP[answer[0]]})`));
+          ask();
+          return;
+        }
+        attempts++;
+        if (s === answer) {
+          console.log(colors.success('decoded!'));
+          let exp = 30;
+          if (attempts === 1) exp = 80;
+          else if (attempts === 2) exp = 50;
+          console.log(colors.gold(`+${exp} EXP`));
+          if (game && game.addExp) game.addExp(exp, 'morse').catch(() => {});
+          if (game && game.gameState && hintsUsed === 0) game.gameState.morseSolved = true;
+          finish({ completed: true, win: true, attempts });
+          return;
+        }
+        console.log(colors.warning('not quite'));
+        ask();
+      });
+    };
+    rl.on('close', () => finish({ completed: false, win: false, attempts }));
+    ask();
+  });
+}
+
+module.exports = {
+  snake, guess, matrix, pong, wordle, scoreGuess,
+  qte, logicPuzzle, morse,
+  evaluateCircuit, solveCircuit,
+  morseEncode, morseDecode, MORSE_MAP, LOGIC_GATES
+};

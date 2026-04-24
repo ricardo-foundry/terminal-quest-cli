@@ -8,6 +8,31 @@ const { t, setLocale, getLocale, availableLocales } = require('./i18n');
 const { availableThemes } = require('./themes');
 const saveMod = require('./save');
 const minigames = require('./minigames');
+const shareMod = require('./share');
+const timeMod = require('./time');
+const { groupByCategory } = require('./achievements');
+
+// Item classification table. Keys are item ids, values describe category & effect.
+const ITEM_META = {
+  'abyss-gazer-eye': { category: 'key',        effect: 'Reveals hidden items permanently.' },
+  'health-potion':   { category: 'consumable', effect: 'Restores 20 HP (flavour only).' },
+  'mana-potion':     { category: 'consumable', effect: 'Restores 20 MP (flavour only).' },
+  'key-shard-1':     { category: 'key',        effect: 'Key fragment 1 of 3.' },
+  'key-shard-2':     { category: 'key',        effect: 'Key fragment 2 of 3.' },
+  'key-shard-3':     { category: 'key',        effect: 'Key fragment 3 of 3.' },
+  'torch':           { category: 'equipment',  effect: 'Lights up dark areas.' },
+  'detector':        { category: 'equipment',  effect: 'Pings toward nearby fragments.' },
+  'rare-stamp':      { category: 'collectible',effect: 'Limited-run archive stamp.' },
+  'morse-card':      { category: 'collectible',effect: 'Reference card from the lab.' }
+};
+
+function classifyItem(name) {
+  if (ITEM_META[name]) return ITEM_META[name];
+  if (/potion|elixir/i.test(name)) return { category: 'consumable', effect: 'Restores something.' };
+  if (/key|shard|fragment/i.test(name)) return { category: 'key', effect: 'A key-like item.' };
+  if (/torch|sword|armor|detector/i.test(name)) return { category: 'equipment', effect: 'Usable equipment.' };
+  return { category: 'collectible', effect: 'A keepsake.' };
+}
 
 // Tokenise an input line into argv. Supports single/double quotes.
 function tokenize(input) {
@@ -59,8 +84,43 @@ class CommandSystem {
     input = input.trim();
     if (!input) return;
 
+    // history substitution: !! and !<n>
+    if (input === '!!') {
+      const last = this.history[this.history.length - 1];
+      if (!last) { console.log(colors.error('no history')); return; }
+      console.log(colors.dim('! ' + last));
+      input = last;
+    } else {
+      const m = input.match(/^!(\d+)$/);
+      if (m) {
+        const idx = parseInt(m[1], 10) - 1;
+        const entry = this.history[idx];
+        if (!entry) { console.log(colors.error(`history: !${idx + 1}: event not found`)); return; }
+        console.log(colors.dim('! ' + entry));
+        input = entry;
+      }
+    }
+
     this.history.push(input);
+    // cap history to 200 entries in memory, 50 in save file (trim later)
+    if (this.history.length > 200) this.history = this.history.slice(-200);
     this.historyIndex = this.history.length;
+
+    // keep persisted rolling history <= 50
+    const ps = this.game.gameState;
+    if (!Array.isArray(ps.commandHistory)) ps.commandHistory = [];
+    ps.commandHistory.push(input);
+    if (ps.commandHistory.length > 50) ps.commandHistory = ps.commandHistory.slice(-50);
+    ps.sessionCommands = (ps.sessionCommands || 0) + 1;
+
+    // alias expansion: look up the first token only, replace with alias value
+    const aliases = ps.aliases || {};
+    const firstSpace = input.indexOf(' ');
+    const head = firstSpace === -1 ? input : input.slice(0, firstSpace);
+    const tail = firstSpace === -1 ? '' : input.slice(firstSpace);
+    if (aliases[head]) {
+      input = aliases[head] + tail;
+    }
 
     const parts = tokenize(input);
     if (parts.length === 0) return;
@@ -121,7 +181,18 @@ class CommandSystem {
       42: () => this.cmdEasterEgg('42'),
       hello: () => this.cmdEasterEgg('hello'),
       easteregg: () => this.cmdEasterEgg('easteregg'),
-      admin: () => this.cmdEasterEgg('admin')
+      admin: () => this.cmdEasterEgg('admin'),
+
+      // v2.1 - new commands
+      alias: () => this.cmdAlias(args),
+      unalias: () => this.cmdUnalias(args),
+      history: () => this.cmdHistory(),
+      complete: () => this.cmdComplete(args),
+      wait: () => this.cmdWait(args),
+      sleep: () => this.cmdWait(args),
+      look: () => this.cmdLook(),
+      share: () => this.cmdShare(args),
+      time: () => this.cmdTime()
     };
 
     if (commands[cmd]) {
@@ -255,12 +326,24 @@ class CommandSystem {
       return;
     }
 
+    // phase-based access (lab/archive)
+    const phase = this.game.getPhase();
+    const rule = timeMod.accessRule(targetPath, phase);
+    if (!rule.allowed) {
+      console.log(colors.error(rule.reason));
+      console.log(colors.dim('  tip: try `wait` to advance the day/night cycle.'));
+      return;
+    }
+
     this.game.currentPath = targetPath;
     this.game.updatePrompt();
 
     if (!this.game.gameState.visitedDirs.includes(targetPath)) {
       this.game.gameState.visitedDirs.push(targetPath);
     }
+    // exploration advances time
+    this.game.advanceTime(1);
+    this.game.evaluateAutoAchievements().catch(() => {});
 
     if (targetPath === '/system/core') {
       console.log(colors.warning('entering system core'));
@@ -432,12 +515,14 @@ Location: /home/user/.secret/
   // ---- games ----
   async cmdRun(args) {
     if (args.length === 0) {
-      console.log(colors.error('Usage: run <snake|guess|matrix|pong|wordle>'));
+      console.log(colors.error('Usage: run <snake|guess|matrix|pong|wordle|qte|logic|morse>'));
       return;
     }
     const name = args[0].toLowerCase();
-    const valid = ['snake', 'guess', 'matrix', 'pong', 'wordle'];
-    if (!valid.includes(name)) {
+    const aliasMap = { logic: 'logicPuzzle' };
+    const fnName = aliasMap[name] || name;
+    const valid = ['snake', 'guess', 'matrix', 'pong', 'wordle', 'qte', 'logicPuzzle', 'morse'];
+    if (!valid.includes(fnName)) {
       console.log(colors.error(`run: ${name}: game not found`));
       return;
     }
@@ -448,7 +533,7 @@ Location: /home/user/.secret/
 
     let result;
     try {
-      result = await minigames[name](this.game);
+      result = await minigames[fnName](this.game);
     } finally {
       if (rl) rl.resume();
     }
@@ -518,9 +603,60 @@ Location: /home/user/.secret/
     const inv = this.game.gameState.inventory || [];
     console.log();
     console.log(colors.bold(t('inv.title')));
-    console.log(colors.dim('-'.repeat(40)));
-    if (inv.length === 0) console.log(colors.dim(t('inv.empty')));
-    else inv.forEach((item, i) => console.log(`  ${i + 1}. ${colors.accent(item)}`));
+    if (inv.length === 0) {
+      console.log(colors.dim('-'.repeat(60)));
+      console.log(colors.dim(t('inv.empty')));
+      console.log();
+      return;
+    }
+
+    // group by category
+    const groups = { consumable: [], equipment: [], key: [], collectible: [] };
+    for (const it of inv) {
+      const meta = classifyItem(it);
+      const cat = groups[meta.category] ? meta.category : 'collectible';
+      groups[cat].push({ name: it, effect: meta.effect });
+    }
+
+    const labels = {
+      consumable:  '消耗品 / Consumables',
+      equipment:   '装备   / Equipment',
+      key:         '关键物 / Key Items',
+      collectible: '收藏   / Collectibles'
+    };
+
+    const catWidth = 14;
+    const nameWidth = 22;
+    const effectWidth = 34;
+    const border = '+' + '-'.repeat(catWidth + 2) + '+' + '-'.repeat(nameWidth + 2) + '+' + '-'.repeat(effectWidth + 2) + '+';
+
+    console.log(border);
+    console.log(
+      '| ' + padVisual(colors.bold('Category'), catWidth) +
+      ' | ' + padVisual(colors.bold('Item'), nameWidth) +
+      ' | ' + padVisual(colors.bold('Effect'), effectWidth) + ' |'
+    );
+    console.log(border);
+    let any = false;
+    for (const [cat, items] of Object.entries(groups)) {
+      if (items.length === 0) continue;
+      any = true;
+      items.forEach((entry, i) => {
+        const catCell = i === 0 ? labels[cat] : '';
+        const colorFn = cat === 'key' ? colors.gold
+          : cat === 'equipment' ? colors.primary
+          : cat === 'consumable' ? colors.success
+          : colors.accent;
+        console.log(
+          '| ' + padVisual(colors.dim(catCell), catWidth) +
+          ' | ' + padVisual(colorFn(entry.name), nameWidth) +
+          ' | ' + padVisual(colors.dim(entry.effect), effectWidth) + ' |'
+        );
+      });
+      console.log(border);
+    }
+    if (!any) console.log(colors.dim(t('inv.empty')));
+    console.log(colors.dim('  tip: type "use <item>" from this list to use it.'));
     console.log();
   }
 
@@ -536,17 +672,26 @@ Location: /home/user/.secret/
       return;
     }
     console.log(colors.info(`using ${itemName}`));
+    const meta = classifyItem(itemName);
     if (itemName === 'abyss-gazer-eye') {
       console.log(colors.purple('vision sharpened - hidden items now visible'));
       this.game.gameState.scanMode = true;
+    } else if (meta.category === 'consumable') {
+      const idx = inv.indexOf(itemName);
+      if (idx >= 0) inv.splice(idx, 1);
+      console.log(colors.success('you feel briefly better. (consumable used)'));
+    } else if (meta.category === 'equipment') {
+      console.log(colors.primary(`${itemName} equipped. ${meta.effect}`));
+    } else if (meta.category === 'key') {
+      console.log(colors.gold(`${itemName} hums faintly.`));
     } else {
-      console.log(colors.dim('nothing happens'));
+      console.log(colors.dim('you turn it over in your hand - nothing else happens.'));
     }
   }
 
   async cmdTalk(args) {
     if (args.length === 0) {
-      console.log(colors.error('Usage: talk <npc>'));
+      console.log(colors.error('Usage: talk <npc> [choice-id]'));
       const dir = this.game.resolvePath('.');
       if (dir && dir.children) {
         const npcs = Object.entries(dir.children).filter(([, it]) => it.npc);
@@ -558,6 +703,7 @@ Location: /home/user/.secret/
       return;
     }
     const npcName = args[0].toLowerCase();
+    const choiceId = (args[1] || '').toLowerCase();
     const npc = NPCS[npcName];
     if (!npc) {
       console.log(colors.error(`npc not found: ${npcName}`));
@@ -569,9 +715,45 @@ Location: /home/user/.secret/
       console.log(colors.error(`${npc.name} is not here`));
       return;
     }
+
+    const mood = this.game.getNpcMood();
+    const moodBlock = (npc.moods && npc.moods[mood]) || null;
+    const greetLine = (moodBlock && moodBlock.greeting) || npc.dialogs.greeting;
+
     console.log();
-    console.log(colors.accent(`${npc.icon} ${npc.name}:`));
-    console.log(colors.info(`  "${npc.dialogs.greeting}"`));
+    console.log(colors.accent(`${npc.icon} ${npc.name}`) + colors.dim(`  (${mood})`));
+    console.log(colors.info(`  "${greetLine}"`));
+
+    if (!this.game.gameState.npcMoodsSeen) this.game.gameState.npcMoodsSeen = [];
+    if (!this.game.gameState.npcMoodsSeen.includes(mood)) {
+      this.game.gameState.npcMoodsSeen.push(mood);
+    }
+
+    // branching choice handling
+    if (Array.isArray(npc.choices) && npc.choices.length > 0) {
+      if (!choiceId) {
+        console.log();
+        console.log(colors.dim('  choose a response:'));
+        npc.choices.forEach((c, i) => {
+          const sign = c.alignment > 0 ? colors.success('+' + c.alignment)
+                     : c.alignment < 0 ? colors.error(String(c.alignment))
+                     : colors.dim('0');
+          console.log(`    ${colors.primary(c.id)}  [${sign}]  ${c.text}`);
+        });
+        console.log(colors.dim(`  example: talk ${npcName} ${npc.choices[0].id}`));
+      } else {
+        const choice = npc.choices.find((c) => c.id === choiceId);
+        if (!choice) {
+          console.log(colors.error(`unknown choice: ${choiceId}`));
+        } else {
+          this.game.adjustAlignment(choice.alignment);
+          console.log(colors.info(`  "${choice.reply}"`));
+          console.log(colors.dim(`  alignment: ${this.game.gameState.alignment >= 0 ? '+' : ''}${this.game.gameState.alignment}`));
+          await this.game.evaluateAutoAchievements();
+        }
+      }
+    }
+
     console.log();
 
     // track visit of the NPC file
@@ -631,19 +813,40 @@ Location: /home/user/.secret/
     console.log();
     console.log(colors.bold(t('ach.title')));
     console.log(colors.dim('-'.repeat(50)));
+
+    const groups = groupByCategory(this.game.achievements);
+    const order = ['exploration', 'puzzle', 'combat', 'collection', 'speedrun', 'hidden', 'general'];
     let done = 0, total = 0;
-    for (const ach of Object.values(this.game.achievements)) {
-      total++;
-      if (ach.unlocked) done++;
-      const status = ach.unlocked ? colors.success('[x]') : colors.dim('[ ]');
-      const colorFn = ach.unlocked ? colors.primary : colors.dim;
-      const reward = ach.reward ? colors.gold(` ${ach.reward}`) : '';
-      console.log(`${status} ${colorFn(ach.icon + ' ' + ach.name)}${reward}`);
-      console.log(colors.dim(`   ${ach.desc}`));
+
+    for (const cat of order) {
+      const list = groups[cat];
+      if (!list || list.length === 0) continue;
+      console.log(colors.bold(`  [${cat}]`));
+      for (const ach of list) {
+        total++;
+        if (ach.unlocked) done++;
+        const status = ach.unlocked ? colors.success('[x]') : colors.dim('[ ]');
+        const colorFn = ach.unlocked ? colors.primary : colors.dim;
+        const reward = ach.reward ? colors.gold(` ${ach.reward}`) : '';
+        console.log(`  ${status} ${colorFn(ach.icon + ' ' + ach.name)}${reward}`);
+        console.log(colors.dim(`       ${ach.desc}`));
+      }
+    }
+    // catch any achievements without a known category bucket
+    for (const [cat, list] of Object.entries(groups)) {
+      if (order.includes(cat)) continue;
+      console.log(colors.bold(`  [${cat}]`));
+      for (const ach of list) {
+        total++;
+        if (ach.unlocked) done++;
+        const status = ach.unlocked ? colors.success('[x]') : colors.dim('[ ]');
+        const colorFn = ach.unlocked ? colors.primary : colors.dim;
+        console.log(`  ${status} ${colorFn(ach.icon + ' ' + ach.name)}`);
+      }
     }
     console.log(colors.dim('-'.repeat(50)));
     console.log(t('ach.progress', { done, total }));
-    if (done >= total - 1 && !this.game.achievements.completionist.unlocked) {
+    if (done >= total - 1 && this.game.achievements.completionist && !this.game.achievements.completionist.unlocked) {
       this.game.unlockAchievement('completionist').catch(() => {});
     }
   }
@@ -917,6 +1120,160 @@ Thank you for exploring.
         await this.game.unlockAchievement('easter_egg_hunter');
       }
     }
+  }
+
+  // ---- v2.1 new commands ----
+  cmdAlias(args) {
+    const gs = this.game.gameState;
+    if (!gs.aliases) gs.aliases = {};
+    if (args.length === 0) {
+      console.log();
+      console.log(colors.bold('Aliases'));
+      console.log(colors.dim('-'.repeat(40)));
+      const keys = Object.keys(gs.aliases).sort();
+      if (keys.length === 0) console.log(colors.dim('  (none)'));
+      for (const k of keys) console.log(`  ${colors.primary(k)} = ${colors.dim(gs.aliases[k])}`);
+      console.log();
+      return;
+    }
+    const raw = args.join(' ');
+    const eq = raw.indexOf('=');
+    if (eq === -1) {
+      console.log(colors.error('Usage: alias name=value  (or: alias to list)'));
+      return;
+    }
+    const name = raw.slice(0, eq).trim();
+    let value = raw.slice(eq + 1).trim();
+    if (!name) { console.log(colors.error('alias: empty name')); return; }
+    if ((value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (!value) { console.log(colors.error('alias: empty value')); return; }
+    gs.aliases[name] = value;
+    console.log(colors.success(`alias ${name} = "${value}"`));
+  }
+
+  cmdUnalias(args) {
+    const gs = this.game.gameState;
+    if (!gs.aliases) gs.aliases = {};
+    if (args.length === 0) { console.log(colors.error('Usage: unalias <name>')); return; }
+    for (const name of args) {
+      if (gs.aliases[name]) {
+        delete gs.aliases[name];
+        console.log(colors.success(`removed alias ${name}`));
+      } else {
+        console.log(colors.dim(`no alias: ${name}`));
+      }
+    }
+  }
+
+  cmdHistory() {
+    const h = this.game.gameState.commandHistory || [];
+    console.log();
+    console.log(colors.bold('History (last 50)'));
+    console.log(colors.dim('-'.repeat(40)));
+    if (h.length === 0) console.log(colors.dim('  (empty)'));
+    else h.forEach((line, i) => {
+      console.log('  ' + colors.dim(String(i + 1).padStart(3)) + '  ' + line);
+    });
+    console.log();
+    console.log(colors.dim('  run: !!  or  !<n>  to repeat an entry'));
+    console.log();
+  }
+
+  // Tab-complete helper. Exposed as `complete <prefix>` so tests can exercise it,
+  // and also wired into readline later.
+  cmdComplete(args) {
+    const prefix = (args[0] || '').toLowerCase();
+    const hits = this.completionsFor(prefix);
+    if (hits.length === 0) console.log(colors.dim('(no matches)'));
+    else {
+      console.log(colors.dim(`matches (${hits.length}):`));
+      for (const h of hits) console.log('  ' + h);
+    }
+  }
+
+  completionsFor(prefix) {
+    const out = new Set();
+    const known = [
+      'help','ls','cd','cat','pwd','clear','tree','exit','quit','reboot',
+      'find','grep','scan','decode','analyze','hack','run','matrix',
+      'status','inventory','inv','use','talk','map','quests','achievements',
+      'unlock','hint','save','load','saves','theme','lang','version',
+      'whoami','date','echo','sudo','alias','unalias','history','complete',
+      'wait','sleep','look','share','time'
+    ];
+    for (const c of known) if (c.startsWith(prefix)) out.add(c);
+    // aliases
+    const aliases = (this.game && this.game.gameState && this.game.gameState.aliases) || {};
+    for (const k of Object.keys(aliases)) if (k.startsWith(prefix)) out.add(k);
+    // interactive objects in current dir
+    const dir = this.game.resolvePath('.');
+    if (dir && dir.children) {
+      for (const name of Object.keys(dir.children)) {
+        if (name.toLowerCase().startsWith(prefix)) out.add(name);
+      }
+    }
+    return Array.from(out).sort();
+  }
+
+  async cmdWait(args) {
+    const n = Math.max(1, Math.min(24, parseInt(args[0] || '1', 10) || 1));
+    const res = this.game.advanceTime(n);
+    console.log(colors.dim(`time advances by ${n} turn(s) - now ${timeMod.formatClock(res.turn)} (${res.phase.name})`));
+    for (const p of res.newPhases) {
+      console.log(colors.info(`  phase change: ${p.icon} ${p.label}`));
+    }
+    await this.game.evaluateAutoAchievements();
+  }
+
+  cmdLook() {
+    const dir = this.game.resolvePath('.');
+    const phase = this.game.getPhase();
+    console.log();
+    console.log(colors.bold(`you are at ${this.game.currentPath}`));
+    console.log(colors.dim(`  phase: ${phase.icon} ${phase.label}  clock: ${timeMod.formatClock(this.game.gameState.turn || 0)}`));
+    if (dir && dir.children) {
+      const npcs = Object.keys(dir.children).filter((n) => dir.children[n].npc);
+      const files = Object.keys(dir.children).filter((n) => dir.children[n].type === 'file' && !dir.children[n].hidden);
+      const dirs = Object.keys(dir.children).filter((n) => dir.children[n].type === 'dir' && !dir.children[n].hidden);
+      if (npcs.length) console.log(colors.accent('  NPCs here: ') + npcs.join(', '));
+      if (files.length) console.log(colors.dim('  files:  ') + files.slice(0, 6).join(', ') + (files.length > 6 ? ', ...' : ''));
+      if (dirs.length) console.log(colors.dim('  paths:  ') + dirs.join(', '));
+    }
+    console.log();
+    // looking around takes 1 turn
+    this.game.advanceTime(1);
+  }
+
+  cmdTime() {
+    const phase = this.game.getPhase();
+    const clock = timeMod.formatClock(this.game.gameState.turn || 0);
+    console.log();
+    console.log(colors.bold('in-game clock'));
+    console.log(`  time:   ${clock}`);
+    console.log(`  phase:  ${phase.icon} ${phase.label}`);
+    console.log(`  turn:   ${this.game.gameState.turn || 0}`);
+    const seen = this.game.gameState.phasesSeen || [];
+    console.log(colors.dim(`  phases seen this playthrough: ${seen.join(', ') || '(none)'}`));
+    console.log();
+  }
+
+  async cmdShare(args) {
+    const handle = args[0];
+    const pkg = require('../package.json');
+    const { LEVELS: LVL } = require('./data');
+    const title = (LVL[this.game.gameState.level] || {}).title || '';
+    const out = shareMod.generate(this.game, { handle, title });
+    console.log();
+    console.log(colors.dim(`share card saved: ${out.file}`));
+    console.log();
+    console.log(out.card);
+    console.log();
+    console.log(colors.dim(`v${pkg.version}  -  copy and paste the box above anywhere!`));
+    console.log();
+    await this.game.evaluateAutoAchievements();
   }
 
   historyUp() {

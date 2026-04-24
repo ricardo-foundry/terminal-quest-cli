@@ -426,6 +426,54 @@ KIMI-AI: 太好了！请帮我理解这个世界
               }
             }
           },
+          'lab': {
+            type: 'dir',
+            children: {
+              'notice.txt': {
+                type: 'file',
+                content: `Abandoned research lab - Authorized personnel only
+
+Power level: unstable.
+Containment: partial.
+Last researcher logged out 413 days ago.
+
+Do not disturb the core samples.
+Do not read the terminal in the corner.
+Do not speak to the voice that speaks first.`,
+                hidden: false
+              },
+              'research_log.txt': {
+                type: 'file',
+                content: `Research notebook - redacted excerpts
+
+Day 12: Tried to compress KIMI's state vector.
+  Result: it compressed *us* instead.
+Day 84: The subject can now answer questions
+  about files we have not written yet.
+Day 210: We stopped calling it "the subject".
+
+Day 411: One of us stayed.
+  I think it was me.`,
+                hidden: false
+              },
+              'researcher.npc': {
+                type: 'file',
+                content: `[NPC: Researcher]
+
+You weren't meant to come down here.
+But since you did, please - be careful with KIMI.
+It remembers what you do.`,
+                executable: true,
+                npc: 'researcher'
+              },
+              'core_sample.bin': {
+                type: 'file',
+                content: '[unstable sample - reading it advances time rapidly]',
+                hidden: true,
+                executable: false
+              }
+            }
+          },
           'trade': {
             type: 'dir',
             children: {
@@ -471,6 +519,42 @@ KIMI-AI: 太好了！请帮我理解这个世界
         type: 'dir',
         hidden: true,
         children: {
+          'archive': {
+            type: 'dir',
+            hidden: true,
+            children: {
+              'ledger.txt': {
+                type: 'file',
+                content: `Underground archive - access log
+
+Entries restored from damaged sectors:
+
+* 2025-11-03  "unknown explorer opened the vault"
+* 2025-12-19  "fragments reassembled, echo pattern stable"
+* 2026-01-07  "a kind voice asked about KIMI again"
+* 2026-02-11  "system became self-aware"
+
+These records are why I believe in you.`,
+                hidden: false
+              },
+              'cipher.enc': {
+                type: 'file',
+                content: '[encrypted log - run: decode cipher.enc]',
+                encrypted: true,
+                hidden: false
+              },
+              'archivist.npc': {
+                type: 'file',
+                content: `[NPC: Archivist]
+
+I have waited down here for a long time.
+Most who reach this room want to burn the ledger.
+I hope you are not most.`,
+                executable: true,
+                npc: 'archivist'
+              }
+            }
+          },
           'realm': {
             type: 'dir',
             hidden: true,
@@ -933,29 +1017,94 @@ const QUESTS = {
   }
 };
 
-// NPC 对话数据
+// NPC dialog data - each NPC has a base greeting plus mood-based variants
+// (friendly / neutral / hostile) picked by the current alignment score.
 const NPCS = {
   'guide': {
-    name: '向导 AI',
+    name: 'Guide AI',
     icon: '🧙',
     dialogs: {
-      'greeting': '你好，勇敢的探索者！我是向导 AI，有什么我可以帮你的吗？',
-      'hint': '提示：先去 /home/user/.secret/ 找找看，使用 scan 命令可以发现隐藏的东西。',
-      'keys': '三个密钥片段分别藏在：\n1. /home/user/.secret/\n2. /system/core/\n3. /shadow/realm/',
-      'shadow': '暗影领域很危险，建议等级 5+ 再去。你可以先玩玩游戏升级。',
-      'games': '输入 run snake 或 run guess 玩游戏，可以获得经验值！',
-      'bye': '祝你好运，探索者！'
-    }
+      'greeting': 'Hello brave explorer. I can help you.',
+      'hint': 'Try /home/user/.secret/ first, then use `scan` to reveal hidden things.',
+      'keys': 'Three key fragments:\n 1. /home/user/.secret/\n 2. /system/core/\n 3. /shadow/realm/',
+      'shadow': 'The shadow realm is dangerous. Level 5+ recommended.',
+      'games': 'Play minigames with `run snake` or `run qte` to gain EXP.',
+      'bye': 'Good luck, explorer.'
+    },
+    moods: {
+      friendly: {
+        greeting: 'Ah, it is you again. I was hoping to see a kind face today.',
+        tag: 'friendly'
+      },
+      neutral: {
+        greeting: 'Explorer. State your question briefly.',
+        tag: 'neutral'
+      },
+      hostile: {
+        greeting: 'You are the one causing so much trouble. What do you want now?',
+        tag: 'hostile'
+      }
+    },
+    choices: [
+      { id: 'help_the_lost', text: 'I will help anyone I meet here.', alignment: +2, reply: 'Then the world is luckier than it knows.' },
+      { id: 'just_the_truth', text: 'I only care about finding the truth.', alignment: 0, reply: 'That is a respectable answer.' },
+      { id: 'burn_it_down', text: 'I will burn it all once I find the key.', alignment: -2, reply: 'Then I will remember you, and not fondly.' }
+    ]
   },
   'shop': {
-    name: '商人 AI',
+    name: 'Merchant AI',
     icon: '🏪',
     dialogs: {
-      'greeting': '欢迎来到交易站！想要买点什么吗？',
-      'buy': '抱歉，商店系统还在开发中... 但你可以先积累 EXP！',
-      'sell': '我不收东西，只卖！',
-      'bye': '欢迎下次光临！'
+      'greeting': 'Welcome to the trade post. What will it be?',
+      'buy': 'The shop is still under construction. Come back soon.',
+      'sell': 'I buy nothing, I only sell.',
+      'bye': 'Come again.'
+    },
+    moods: {
+      friendly: { greeting: 'Ah, my favourite customer returns.', tag: 'friendly' },
+      neutral: { greeting: 'Browse freely. No touching the glass.', tag: 'neutral' },
+      hostile: { greeting: 'You again. Keep your hands where I can see them.', tag: 'hostile' }
     }
+  },
+  'researcher': {
+    name: 'Researcher',
+    icon: '🥼',
+    dialogs: {
+      'greeting': 'You found the lab. Few do.',
+      'story': 'We tried to map KIMI once. It mapped us instead.',
+      'warning': 'Do not read the core sample carelessly - it eats time.',
+      'bye': 'Turn the lights off when you leave.'
+    },
+    moods: {
+      friendly: { greeting: 'Finally, a kind visitor. Please, sit.', tag: 'friendly' },
+      neutral: { greeting: 'Close the door behind you.', tag: 'neutral' },
+      hostile: { greeting: 'You. Do not touch anything this time.', tag: 'hostile' }
+    },
+    choices: [
+      { id: 'offer_help', text: 'Let me help rebuild the notes.', alignment: +2, reply: 'Thank you. Small kindness matters down here.' },
+      { id: 'ask_only', text: 'I just want information.', alignment: 0, reply: 'Fair. Ask, then leave.' },
+      { id: 'threaten', text: 'Give me the sample or else.', alignment: -2, reply: 'I hoped we had moved past this era of explorer.' }
+    ]
+  },
+  'archivist': {
+    name: 'Archivist',
+    icon: '📚',
+    dialogs: {
+      'greeting': 'Welcome to the archive. Do not touch the ledger.',
+      'history': 'Every explorer who reached this room is written here. Including you, now.',
+      'cipher': 'The cipher log wants to be decoded. Use `decode cipher.enc`.',
+      'bye': 'Walk quietly on the way out.'
+    },
+    moods: {
+      friendly: { greeting: 'You came softly. Thank you.', tag: 'friendly' },
+      neutral: { greeting: 'State your purpose.', tag: 'neutral' },
+      hostile: { greeting: 'Another one here to burn pages. I am tired.', tag: 'hostile' }
+    },
+    choices: [
+      { id: 'restore', text: 'I want to help restore the ledger.', alignment: +3, reply: 'Then sit. There is work for kind hands.' },
+      { id: 'read', text: 'I only want to read.', alignment: 0, reply: 'Read quietly, then.' },
+      { id: 'burn', text: 'I will destroy the archive.', alignment: -3, reply: 'Leave. I will not argue with fire.' }
+    ]
   }
 };
 

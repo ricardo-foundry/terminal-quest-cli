@@ -5,8 +5,10 @@
 const readline = require('readline');
 const { colors, bootSequence, showAchievement, showLevelUp, applyTheme } = require('./ui');
 const { FILE_SYSTEM, ACHIEVEMENTS, QUESTS, LEVELS } = require('./data');
+const { EXTRA_ACHIEVEMENTS, evaluateAutoUnlocks } = require('./achievements');
 const { CommandSystem } = require('./commands');
 const saveMod = require('./save');
+const timeMod = require('./time');
 const { t, setLocale, detectLocale } = require('./i18n');
 
 const DEFAULT_STATE = {
@@ -33,7 +35,21 @@ const DEFAULT_STATE = {
   questsState: {},
   achievementsState: {},
   theme: 'dark',
-  locale: undefined // auto-detect when missing
+  locale: undefined, // auto-detect when missing
+  // v2.1 additions
+  turn: 0,
+  phasesSeen: [],
+  nightVisited: false,
+  dawnVisited: false,
+  alignment: 0,
+  npcMoodsSeen: [],
+  sessionCommands: 0,
+  shareCount: 0,
+  qteWon: false,
+  logicSolved: false,
+  morseSolved: false,
+  aliases: { ll: 'ls -la', '.': 'look', l: 'ls', h: 'help', c: 'clear' },
+  commandHistory: []
 };
 
 class TerminalGame {
@@ -43,7 +59,13 @@ class TerminalGame {
     this.commandSystem = new CommandSystem(this);
     this.gameState = this.loadGameState();
     this.currentPath = this.gameState.currentPath || '/home/user';
-    this.achievements = JSON.parse(JSON.stringify(ACHIEVEMENTS));
+    this.achievements = JSON.parse(JSON.stringify({ ...ACHIEVEMENTS, ...EXTRA_ACHIEVEMENTS }));
+    // re-attach check functions (they do not survive JSON round-trip)
+    for (const [id, src] of Object.entries(EXTRA_ACHIEVEMENTS)) {
+      if (this.achievements[id] && typeof src.check === 'function') {
+        this.achievements[id].check = src.check;
+      }
+    }
     this.quests = JSON.parse(JSON.stringify(QUESTS));
     this.rl = null;
     this.exiting = false;
@@ -144,7 +166,10 @@ class TerminalGame {
     const p = this.currentPath;
     const displayPath = p.replace('/home/user', '~').replace('/home', '~');
     const levelIndicator = colors.gold(`[Lv.${this.gameState.level}]`);
-    this.prompt = `${levelIndicator} ${colors.primary('explorer@kimi-os')}:${colors.secondary(displayPath)}$`;
+    const phase = this.getPhase();
+    const clock = timeMod.formatClock(this.gameState.turn || 0);
+    const timeIndicator = colors.dim(`[${phase.icon} ${clock}]`);
+    this.prompt = `${timeIndicator} ${levelIndicator} ${colors.primary('explorer@kimi-os')}:${colors.secondary(displayPath)}$`;
   }
 
   showWelcome() {
@@ -300,6 +325,45 @@ class TerminalGame {
     }
     if (this.gameState.foundMasterKey) {
       this.gameState.explorationLevel = Math.max(this.gameState.explorationLevel, 5);
+    }
+    // evaluate automatic achievements (from the new extras pool)
+    this.evaluateAutoAchievements().catch(() => {});
+  }
+
+  // -------- Time & alignment --------
+  advanceTime(n = 1) {
+    const res = timeMod.advance(this.gameState, n);
+    if (!this.gameState.phasesSeen) this.gameState.phasesSeen = [];
+    for (const p of res.newPhases) {
+      if (!this.gameState.phasesSeen.includes(p.name)) {
+        this.gameState.phasesSeen.push(p.name);
+      }
+      if (p.name === 'night') this.gameState.nightVisited = true;
+      if (p.name === 'dawn') this.gameState.dawnVisited = true;
+    }
+    return res;
+  }
+
+  getPhase() {
+    return timeMod.getPhase(this.gameState.turn || 0);
+  }
+
+  adjustAlignment(delta) {
+    const cur = Number(this.gameState.alignment) || 0;
+    this.gameState.alignment = Math.max(-10, Math.min(10, cur + (Number(delta) || 0)));
+  }
+
+  getNpcMood(alignmentOverride) {
+    const a = alignmentOverride !== undefined ? alignmentOverride : (this.gameState.alignment || 0);
+    if (a >= 3) return 'friendly';
+    if (a <= -3) return 'hostile';
+    return 'neutral';
+  }
+
+  async evaluateAutoAchievements() {
+    const ids = evaluateAutoUnlocks(this.achievements, this.gameState);
+    for (const id of ids) {
+      await this.unlockAchievement(id);
     }
   }
 

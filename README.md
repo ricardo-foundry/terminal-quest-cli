@@ -40,13 +40,25 @@ npx terminal-quest
 - **Bilingual UI** — English and Chinese, switchable at runtime or via
   `--lang`.
 - **Themeable** — `dark`, `light`, and `retro` palettes, or drop in your own.
-- **RPG progression** — 7 levels, 18 achievements, 12 main-story quests and a
-  key-shard endgame.
-- **5 built-in minigames** — snake, guess-the-number, matrix rain, pong and a
-  Wordle clone.
+- **RPG progression** — 7 levels, 34 achievements across 6 categories,
+  12 main-story quests and a key-shard endgame.
+- **8 built-in minigames** — snake, guess-the-number, matrix rain, pong,
+  Wordle clone, reaction QTE, logic-circuit solver and morse decoder.
 - **Zero new runtime deps** — just `chalk`, `figlet`, and `keypress`.
-- **Tested** — 24 tests on Node's built-in test runner, run on Node 18 / 20 /
+- **Tested** — 51 tests on Node's built-in test runner, run on Node 18 / 20 /
   22 across Ubuntu, macOS and Windows.
+
+### v2.1 — content depth update
+
+- New areas `/world/lab/` and `/shadow/archive/` with their own NPCs and
+  lore, gated by the new in-game day/night cycle.
+- NPCs now have mood-based greetings and branching dialog that shifts your
+  kindness/ruthless alignment. Reach +5 or -5 for alignment-exclusive
+  achievements.
+- Shell-like command ergonomics: `alias`/`unalias`, `history`, `!!`, `!<n>`,
+  a `complete <prefix>` helper and a categorised `inventory` table.
+- `share` generates a paste-ready ASCII score card under
+  `~/.terminal-quest/shares/` — perfect for screenshots.
 
 ## Install
 

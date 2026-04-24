@@ -7,7 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+### Added (v2.1 content depth)
+- 16 extra achievements spanning exploration, puzzle, combat, collection,
+  speedrun and hidden categories. Auto-evaluator runs every turn.
+- Three new minigames: reaction QTE (`run qte`), logic-circuit solver
+  (`run logic`) and morse-code decoder (`run morse`), each with a pure
+  evaluator exported for unit tests.
+- Two new areas: abandoned research lab at `/world/lab/` and underground
+  archive at `/shadow/archive/`, both with their own NPCs and lore.
+- NPC mood system - greetings and dialog branches change with the player's
+  kindness/ruthless alignment (`talk <npc> <choice-id>`).
+- `achievements` grouped display by category, plus `share` command that
+  writes an ASCII art score card to `~/.terminal-quest/shares/`.
+- Alias system (`alias name=value`, `unalias`, persisted per save), shell
+  history features (`history`, `!!`, `!<n>`) and a `complete <prefix>`
+  tab-completion helper.
+- In-game time and day/night cycle (dawn/day/dusk/night), with `wait`,
+  `sleep`, `look` and `time` commands. Some areas are phase-gated.
+- Inventory table UI grouped into consumables / equipment / key items /
+  collectibles.
+
+### Added (earlier in this release)
 - GitHub issue and pull request templates, CI matrix across Node 18/20/22 on
   Ubuntu, macOS and Windows.
 - `publish-npm.yml` workflow that publishes tagged releases to the npm registry
@@ -22,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `CHANGELOG.md` now follows the Keep a Changelog structure with version
   deltas from `v1.0.0` to `v2.0.0` and an Unreleased section.
+- Test suite grew from 24 to 51 tests covering achievements, share cards,
+  time cycle, new minigames and the alias/history system.
 
 ## [2.0.0] - 2026-02-14
 
