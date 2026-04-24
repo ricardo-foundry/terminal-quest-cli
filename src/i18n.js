@@ -1,0 +1,240 @@
+// ============================================
+// Terminal Quest CLI - i18n
+// ============================================
+// Lightweight locale system. Detects locale from env, allows runtime switch.
+// API: t(key, params?)  setLocale(code)  getLocale()  availableLocales()
+
+const DICTS = {
+  en: {
+    // generic
+    'cmd.unknown': 'Command not found: {cmd}',
+    'cmd.hint': 'Type "help" to list available commands',
+    'cmd.usage': 'Usage: {usage}',
+    'ok': 'OK',
+    'done': 'Done',
+
+    // boot
+    'boot.ready': 'System ready.',
+    'welcome.loaded': 'Core modules loaded',
+    'welcome.banner': 'Welcome back, explorer!',
+    'welcome.level': 'Current level: Lv.{level}',
+    'welcome.achievements': 'Achievements: {n}',
+    'welcome.status': 'Type "status" for details',
+    'welcome.new': 'Type "help" to start your adventure',
+    'welcome.tutorial': 'Type "cat start_here.txt" for the tutorial',
+
+    // ls / cd / cat
+    'ls.empty': '  (empty)',
+    'ls.total': '  Total: {dirs} dirs, {files} files',
+    'ls.noent': "ls: cannot access '{path}': No such file or directory",
+    'cd.noent': "cd: no such file or directory: {path}",
+    'cd.notdir': "cd: not a directory: {path}",
+    'cd.locked.level': 'Level too low! {area} requires Lv.{need} (you: Lv.{have})',
+    'cd.hint.levelup': 'Tip: play minigames or finish quests to level up',
+    'cat.usage': 'Usage: cat <file>',
+    'cat.noent': "cat: {file}: No such file or directory",
+    'cat.isdir': "cat: {file}: Is a directory",
+    'cat.encrypted': 'File is encrypted. Use: decode {file}',
+
+    // scan / decode
+    'scan.running': 'Scanning system...',
+    'scan.done': 'Scan mode enabled',
+    'scan.hidden': 'Detected {n} hidden item(s) in this directory',
+    'decode.usage': 'Usage: decode <file>',
+    'decode.noent': 'decode: {file}: not found',
+    'decode.notenc': 'decode: file does not need decoding',
+    'decode.running': 'Decrypting...',
+
+    // keys
+    'key.got': 'Acquired key fragment: {frag}',
+    'key.all': 'All key fragments collected! Master key: {key}',
+    'key.unlock.hint': 'Type "unlock master" to use the key',
+    'key.incomplete': 'Master key incomplete ({have}/3)',
+
+    // RPG
+    'status.title': 'Character Status',
+    'status.level': 'Level',
+    'status.exp': 'EXP',
+    'status.progress': 'Progress',
+    'status.next': 'Needs {n} EXP to next level',
+    'status.maxed': 'Max level reached',
+    'status.dirs': 'Visited dirs',
+    'status.files': 'Files read',
+    'status.games': 'Games played',
+    'status.achievements': 'Achievements',
+    'status.quests': 'Quests',
+    'inv.title': 'Inventory',
+    'inv.empty': '  (empty)',
+    'use.usage': 'Usage: use <item>',
+    'use.missing': 'You do not have: {item}',
+    'quests.title': 'Quests',
+    'quests.progress': 'Progress: {done}/{total}',
+    'ach.title': 'Achievements',
+    'ach.progress': 'Progress: {done}/{total}',
+
+    // save / theme / lang
+    'save.ok': 'Game saved to slot "{slot}"',
+    'save.fail': 'Could not save game: {err}',
+    'save.usage': 'Usage: save [slot-name]',
+    'load.ok': 'Loaded slot "{slot}"',
+    'load.fail': 'Could not load slot "{slot}": {err}',
+    'load.usage': 'Usage: load <slot-name>',
+    'saves.title': 'Save slots',
+    'saves.empty': '  (no saves yet)',
+    'theme.usage': 'Usage: theme <dark|light|retro>',
+    'theme.set': 'Theme set to {name}',
+    'theme.unknown': 'Unknown theme: {name}',
+    'lang.usage': 'Usage: lang <en|zh>',
+    'lang.set': 'Language set to {name}',
+    'lang.unknown': 'Unknown language: {name}',
+
+    // exit
+    'exit.confirm': 'Save before exit? [Y/n] ',
+    'exit.bye': 'Goodbye, explorer.',
+    'exit.saved': 'Progress saved.',
+
+    // achievements
+    'ach.unlocked': 'Achievement unlocked!',
+    'ach.reward': 'Reward: {reward}',
+    'levelup.title': 'LEVEL UP',
+    'levelup.now': 'Lv.{from} → Lv.{to}',
+    'levelup.gained': 'Title: {title}'
+  },
+
+  zh: {
+    'cmd.unknown': '命令未找到: {cmd}',
+    'cmd.hint': '输入 "help" 查看可用命令',
+    'cmd.usage': '用法: {usage}',
+    'ok': '完成',
+    'done': '完成',
+
+    'boot.ready': '系统就绪。',
+    'welcome.loaded': '核心模块已加载',
+    'welcome.banner': '欢迎回来，探索者！',
+    'welcome.level': '当前等级: Lv.{level}',
+    'welcome.achievements': '已获得成就: {n} 个',
+    'welcome.status': '输入 "status" 查看详细状态',
+    'welcome.new': '输入 "help" 开始你的冒险',
+    'welcome.tutorial': '输入 "cat start_here.txt" 阅读新手指南',
+
+    'ls.empty': '  (空目录)',
+    'ls.total': '  总计: {dirs} 目录, {files} 文件',
+    'ls.noent': "ls: 无法访问 '{path}': 没有那个文件或目录",
+    'cd.noent': "cd: 无法访问 '{path}': 没有那个文件或目录",
+    'cd.notdir': "cd: '{path}' 不是目录",
+    'cd.locked.level': '等级不足！{area} 需要 Lv.{need}（当前 Lv.{have}）',
+    'cd.hint.levelup': '提示: 玩游戏或完成任务可以提升等级',
+    'cat.usage': '用法: cat <文件名>',
+    'cat.noent': "cat: {file}: 没有那个文件或目录",
+    'cat.isdir': "cat: {file}: 是一个目录",
+    'cat.encrypted': '文件已加密，请使用: decode {file}',
+
+    'scan.running': '扫描系统中...',
+    'scan.done': '扫描模式已启用',
+    'scan.hidden': '检测到当前目录存在 {n} 个隐藏项目',
+    'decode.usage': '用法: decode <文件名>',
+    'decode.noent': 'decode: {file}: 文件未找到',
+    'decode.notenc': 'decode: 该文件不需要解码',
+    'decode.running': '解码中...',
+
+    'key.got': '获得密钥片段: {frag}',
+    'key.all': '集齐所有密钥片段！主密钥: {key}',
+    'key.unlock.hint': '输入 "unlock master" 使用密钥',
+    'key.incomplete': '密钥不完整（{have}/3）',
+
+    'status.title': '角色状态',
+    'status.level': '等级',
+    'status.exp': '经验',
+    'status.progress': '进度',
+    'status.next': '还需 {n} EXP 升级',
+    'status.maxed': '已达到最高等级',
+    'status.dirs': '访问目录',
+    'status.files': '阅读文件',
+    'status.games': '游戏次数',
+    'status.achievements': '成就',
+    'status.quests': '任务',
+    'inv.title': '背包',
+    'inv.empty': '  (空)',
+    'use.usage': '用法: use <物品名>',
+    'use.missing': '你没有: {item}',
+    'quests.title': '任务列表',
+    'quests.progress': '进度: {done}/{total}',
+    'ach.title': '成就列表',
+    'ach.progress': '进度: {done}/{total}',
+
+    'save.ok': '游戏已保存到存档 "{slot}"',
+    'save.fail': '存档失败: {err}',
+    'save.usage': '用法: save [存档名]',
+    'load.ok': '已加载存档 "{slot}"',
+    'load.fail': '无法加载存档 "{slot}": {err}',
+    'load.usage': '用法: load <存档名>',
+    'saves.title': '存档列表',
+    'saves.empty': '  (暂无存档)',
+    'theme.usage': '用法: theme <dark|light|retro>',
+    'theme.set': '主题已切换为 {name}',
+    'theme.unknown': '未知主题: {name}',
+    'lang.usage': '用法: lang <en|zh>',
+    'lang.set': '语言已切换为 {name}',
+    'lang.unknown': '未知语言: {name}',
+
+    'exit.confirm': '退出前保存进度？[Y/n] ',
+    'exit.bye': '再见，探索者。',
+    'exit.saved': '进度已保存。',
+
+    'ach.unlocked': '成就解锁!',
+    'ach.reward': '奖励: {reward}',
+    'levelup.title': '等级提升',
+    'levelup.now': 'Lv.{from} → Lv.{to}',
+    'levelup.gained': '称号: {title}'
+  }
+};
+
+let currentLocale = 'en';
+
+function detectLocale() {
+  const raw =
+    process.env.TERMINAL_QUEST_LANG ||
+    process.env.LC_ALL ||
+    process.env.LC_MESSAGES ||
+    process.env.LANG ||
+    '';
+  const lower = raw.toLowerCase();
+  if (lower.startsWith('zh')) return 'zh';
+  return 'en';
+}
+
+function setLocale(code) {
+  if (DICTS[code]) {
+    currentLocale = code;
+    return true;
+  }
+  return false;
+}
+
+function getLocale() {
+  return currentLocale;
+}
+
+function availableLocales() {
+  return Object.keys(DICTS);
+}
+
+function t(key, params) {
+  const dict = DICTS[currentLocale] || DICTS.en;
+  let str = dict[key];
+  if (str === undefined) {
+    // fall back to English then key
+    str = DICTS.en[key] !== undefined ? DICTS.en[key] : key;
+  }
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      str = str.replace(new RegExp('\\{' + k + '\\}', 'g'), String(v));
+    }
+  }
+  return str;
+}
+
+// initialize based on env on load
+setLocale(detectLocale());
+
+module.exports = { t, setLocale, getLocale, availableLocales, detectLocale, DICTS };

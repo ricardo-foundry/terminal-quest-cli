@@ -1,0 +1,55 @@
+{
+  "name": "terminal-quest-cli",
+  "version": "2.0.0",
+  "description": "🎮 Terminal Quest - 终端冒险游戏 (CLI版本) - 在真实终端中体验RPG冒险解谜",
+  "main": "src/game.js",
+  "bin": {
+    "terminal-quest": "./bin/terminal-quest.js",
+    "tq": "./bin/terminal-quest.js",
+    "adventure": "./bin/terminal-quest.js"
+  },
+  "preferGlobal": true,
+  "files": [
+    "bin/",
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node bin/terminal-quest.js",
+    "dev": "node bin/terminal-quest.js --dev",
+    "test": "node --test test/*.test.js",
+    "test:watch": "node --test --watch test/*.test.js"
+  },
+  "keywords": [
+    "game",
+    "cli",
+    "terminal",
+    "puzzle",
+    "adventure",
+    "retro",
+    "rpg",
+    "text-adventure",
+    "interactive-fiction",
+    "linux",
+    "kimi-os"
+  ],
+  "author": "KIMI-AI <kimi@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ricardo-M-L/terminal-quest-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Ricardo-M-L/terminal-quest-cli/issues"
+  },
+  "homepage": "https://github.com/Ricardo-M-L/terminal-quest-cli#readme",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "figlet": "^1.7.0",
+    "keypress": "^0.2.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

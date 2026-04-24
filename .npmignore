@@ -1,0 +1,16 @@
+# 开发文件
+.idea/
+.vscode/
+*.log
+npm-debug.log*
+
+# 测试文件
+*.test.js
+coverage/
+
+# 文档（README 和 LICENSE 会通过 files 字段包含）
+docs/
+
+# 其他
+.DS_Store
+Thumbs.db
