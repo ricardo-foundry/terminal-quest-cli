@@ -95,10 +95,17 @@ time advances... 19:00 (Night)
 share card written: ~/.terminal-quest/shares/card-explorer-2026-04-25T11-21-00Z.txt
 ```
 
-> A real asciinema recording will live at
-> [`docs/demo.cast`](./docs/demo.cast.placeholder) once captured by the
-> next release maintainer — the placeholder file documents the exact
-> `asciinema rec` command.
+> Two asciinema casts ship with the repo, both are valid v2 JSON:
+>
+> - [`docs/demo.cast`](./docs/demo.cast) — hand-authored, polished demo
+>   that tells the "first 60 seconds of the game" story. Regenerate
+>   with `node scripts/write-cast.js`.
+> - [`docs/demo-real.cast`](./docs/demo-real.cast) — captured live by
+>   driving `bin/terminal-quest.js` inside a child process. Regenerate
+>   with `node scripts/record-real-cast.js`. Use this one when you want
+>   proof of what the CLI actually emits, not a curated story.
+>
+> Play either with `asciinema play docs/demo.cast`.
 
 ---
 

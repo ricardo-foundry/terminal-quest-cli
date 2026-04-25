@@ -1090,7 +1090,14 @@ Thank you for exploring.
   }
 
   cmdFind(args) {
-    const pattern = (args[0] || '').slice(0, 200);
+    // v2.5 (iter-9): an empty pattern used to dump the entire 77-entry tree.
+    // Reject it explicitly — players who want a tree have `tree`.
+    if (!args[0] || !String(args[0]).trim()) {
+      console.log(colors.error('Usage: find <pattern>'));
+      console.log(colors.dim('  tip: use `tree` to walk the current directory.'));
+      return;
+    }
+    const pattern = String(args[0]).slice(0, 200);
     const needle = pattern.toLowerCase();
     const results = [];
     const walk = (dir, path) => {

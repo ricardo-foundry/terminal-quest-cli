@@ -37,6 +37,10 @@ function parseArgs(argv) {
     else if (a === '--validate-quest') args.validateQuest = argv[++i];
     else if (a.startsWith('--validate-quest=')) args.validateQuest = a.slice(17);
     else if (a === '--cloud') {
+      // v2.5 (iter-9): mark the flag even when no op was supplied so we can
+      // print a useful usage line instead of silently dropping into the
+      // interactive game.
+      args.cloudFlag = true;
       args.cloudOp = argv[++i];
       args.cloudSlot = argv[++i];
     }
@@ -259,7 +263,7 @@ async function main() {
     runValidateQuest(args.validateQuest);
     return;
   }
-  if (args.cloudOp) {
+  if (args.cloudFlag) {
     await runCloud(args.cloudOp, args.cloudSlot);
     return;
   }

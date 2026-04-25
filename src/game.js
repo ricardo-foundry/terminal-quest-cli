@@ -280,6 +280,17 @@ class TerminalGame {
       this.saveGameState();
     }
 
+    // v2.5 (iter-9): seed phasesSeen with the current phase so `time`
+    // reports something on turn 0 instead of "(none)" until the first
+    // phase boundary is crossed.
+    if (!Array.isArray(this.gameState.phasesSeen)) this.gameState.phasesSeen = [];
+    const startPhase = this.getPhase().name;
+    if (!this.gameState.phasesSeen.includes(startPhase)) {
+      this.gameState.phasesSeen.push(startPhase);
+      if (startPhase === 'night') this.gameState.nightVisited = true;
+      if (startPhase === 'dawn') this.gameState.dawnVisited = true;
+    }
+
     // Small delayed unlock so intro isn't racy
     setTimeout(() => this.unlockAchievement('first_step').catch(() => {}), 500);
 
