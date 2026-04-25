@@ -268,6 +268,40 @@ themes are just an object of `chalk` color names / hex values.
 
 ---
 
+## Known limitations
+
+A few honest constraints to set expectations:
+
+- **Save format is JSON, not encrypted.** The save lives at
+  `~/.terminal-quest/saves/<slot>.json` and a determined player can
+  edit it by hand. Treat this as a feature for modders; treat it as a
+  caveat for "no-cheat" runs.
+- **Save grows linearly with play time.** Replay buffer is capped at
+  500 events and command history at 50, but `commandHistory`,
+  `inventory`, and `npcAffinity` accumulate forever. The CLI prints a
+  one-time warning past 1 MiB.
+- **Alias chains expand at most 8 times per command.** Deeper chains
+  are silently truncated rather than rejected. Cycles (`a=b, b=a`) are
+  guarded — they will not hang the REPL.
+- **Time advance is clamped to one in-game year per call** (120 turns).
+  A `wait`/`sleep` past that is bounded; players who want to skip
+  further must call again. This is defensive against malformed
+  community quests with large `custom`-predicate jumps.
+- **`fs.watch` recursive mode is best-effort.** On Linux without
+  inotify-recursive support, the `--dev` hot-reloader silently
+  no-ops. Use `:reload-quests` (TODO) or restart the CLI.
+- **TTS is opt-in and host-dependent.** Without `--tts` it is a
+  no-op. With `--tts` it shells out to `say` (macOS),
+  `espeak`/`festival` (Linux), or `powershell` (Windows); if none are
+  installed it stays silent.
+- **Community quest predicate evaluator is sandboxed.** Only the
+  tokens `level, exp, alignment, gamesPlayed, keyFragments, turn` are
+  allowed; everything else returns `false`. Authors needing more
+  expressive triggers should compose multiple step entries.
+- **Folder name must equal `id`.** `quests/foo/quest.json` with
+  `"id": "bar"` is skipped at load time with a clear error in
+  `--list-quests`.
+
 ## Roadmap
 
 - [ ] Record `docs/demo.cast` and embed it at the top of this README
