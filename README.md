@@ -19,6 +19,10 @@
 [![Node >= 14](https://img.shields.io/badge/node-%3E%3D14-43853d?logo=node.js&logoColor=white)](https://nodejs.org)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-blue)](#cross-platform-notes)
 [![Bundle size](https://img.shields.io/badge/install%20size-~180%20kB-informational)](https://packagephobia.com/result?p=terminal-quest-cli)
+[![Tests](https://img.shields.io/badge/tests-338%2B-brightgreen?logo=node.js&logoColor=white)](./test)
+[![Quests](https://img.shields.io/badge/quests-11-9cf)](./quests)
+[![Locales](https://img.shields.io/badge/locales-5%20(en%20%7C%20zh%20%7C%20zh--tw%20%7C%20ja%20%7C%20es)-orange)](./docs/I18N_COVERAGE.md)
+[![Minigames](https://img.shields.io/badge/minigames-11-purple)](#usage)
 [![Made with Node](https://img.shields.io/badge/made%20with-Node.js-339933?logo=node.js&logoColor=white)](https://nodejs.org)
 
 </div>

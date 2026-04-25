@@ -2,13 +2,33 @@
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 2.x     | :white_check_mark: |
-| 1.x     | :x:                |
+Security fixes follow the policy below. We only patch lines that are
+still on the supported Node.js range; older lines are end-of-life
+(EOL) and will not be back-ported, even for high-severity issues.
 
-Only the latest `2.x` line receives security fixes. Please upgrade before
-filing a report against an older version.
+| Version line | Released   | Status            | Security fixes | Min Node |
+| ------------ | ---------- | ----------------- | -------------- | -------- |
+| 2.8.x        | 2026-04-25 | **Current**       | :white_check_mark: Active | >= 14    |
+| 2.7.x        | 2026-04-25 | Maintenance       | :white_check_mark: Critical only | >= 14    |
+| 2.6.x        | 2026-04-25 | Maintenance       | :white_check_mark: Critical only | >= 14    |
+| 2.5.x        | 2026-04-25 | EOL after 2026-07 | :warning: Until 2026-07-31 | >= 14    |
+| 2.0.x – 2.4.x| 2026-02-14 → 2026-04-25 | EOL  | :x:            | n/a      |
+| 1.x          | 2026-02-01 | EOL               | :x:            | n/a      |
+
+"Critical only" = a CVE rated **High** or **Critical** that is
+exploitable in default configuration. Lower-severity issues are fixed
+in the **Current** line only; please upgrade.
+
+The `Current` line is whichever minor is the latest published release
+on npm. We aim to keep the previous two minors in *maintenance* and
+will publish patch releases for them when needed.
+
+### Supported Node.js versions
+
+The CI matrix runs on **Node 18, 20, and 22** across macOS, Linux, and
+Windows. `engines.node` is `>=14.0.0`, but we cannot guarantee
+security back-ports for Node versions that are themselves EOL upstream
+(see [nodejs.org/en/about/previous-releases](https://nodejs.org/en/about/previous-releases)).
 
 ## Reporting a Vulnerability
 

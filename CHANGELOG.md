@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation (iter-17 — final consolidation, no version bump)
+- New `docs/JOURNEY.md` — end-to-end timeline of iter-1..iter-16
+  with theme, headline outcome, and running test count per iter.
+- README badge row gains four counters: tests `338+`, quests `11`,
+  locales `5 (en | zh | zh-tw | ja | es)`, minigames `11`. No
+  badge URL points outside the repository.
+- `SECURITY.md` adds a real support-range table (current /
+  maintenance / EOL per minor), spells out "critical only" policy
+  for previous minors, and documents the supported Node.js matrix.
+- `CHANGELOG.md` footer rebuilt: `[Unreleased]` now compares to
+  `v2.8.0`, and entries for `v2.6.0`, `v2.7.0`, `v2.8.0` link to
+  proper compare URLs (the previous footer stopped at `v2.5.0`).
+- No source files in `src/` or `bin/` were touched. No new runtime
+  or dev dependencies. Test count stays at **338**.
+
+### Added (iter-16 — deep bug-bash, no version bump)
+- `scripts/exhaust-quests.js` — synthesises a `gameState` for every
+  quest's friendly / neutral / hostile branch and asserts
+  `completed`/`pickBranch` for all 11 quests.
+- `scripts/fuzz-commands.js` — 100 random / pathological inputs
+  (NUL bytes, RTL overrides, long pastes, history bangs,
+  `:` meta prefix, unicode salad) routed through
+  `CommandSystem.execute`. No unhandled exceptions surface.
+- `test/iter16-bugbash.test.js` — 21 new tests covering
+  time-advance overflow, quest folder/id mismatch, alias chain
+  length 8 / 12, empty stdin, EOF, payload truncation,
+  `evalCustomPredicate` sandbox, large save round-trip, corrupted
+  save recovery, locale parity, history bang on empty, branch
+  picker priority, `completionsFor` uniqueness,
+  `orbital-station` `hasItem` chain enforcement.
+- README "Known limitations" section enumerating every
+  intentional cap (alias chain depth, save bytes, time-advance
+  clamp, predicate sandbox tokens, fs.watch best-effort, TTS host
+  dependency, folder/id rule).
+
+### Fixed (iter-16)
+- `src/time.js#advance` no longer throws `RangeError` on
+  `advance(state, 1e10)`. Now clamps to one in-game year per call
+  (120 turns) and tolerates `NaN` / `Infinity`. Reachable via the
+  public API even though current call sites already cap inputs.
+
 ## [2.8.0] - 2026-04-25 (draft)
 
 ### Added (v2.8 quest pack + TTS — Round 15)
@@ -499,7 +540,10 @@ testable `src/` module tree and ships a real `bin/` CLI.
 - Hidden-file discovery mechanic.
 - Early achievement prototype.
 
-[Unreleased]: https://github.com/ricardo-foundry/terminal-quest-cli/compare/v2.5.0...HEAD
+[Unreleased]: https://github.com/ricardo-foundry/terminal-quest-cli/compare/v2.8.0...HEAD
+[2.8.0]: https://github.com/ricardo-foundry/terminal-quest-cli/compare/v2.7.0...v2.8.0
+[2.7.0]: https://github.com/ricardo-foundry/terminal-quest-cli/compare/v2.6.0...v2.7.0
+[2.6.0]: https://github.com/ricardo-foundry/terminal-quest-cli/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/ricardo-foundry/terminal-quest-cli/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/ricardo-foundry/terminal-quest-cli/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/ricardo-foundry/terminal-quest-cli/compare/v2.2.0...v2.3.0
