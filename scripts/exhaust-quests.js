@@ -23,7 +23,9 @@ const QUESTS_DIR = path.join(__dirname, '..', 'quests');
 const EXPECTED = [
   'starter-lab', 'shadow-archive', 'ghost-train', 'library-cipher',
   'midnight-market', 'clockwork-vault', 'silicon-shrine',
-  'wandering-merchant', 'cyber-bazaar', 'forgotten-archive', 'orbital-station'
+  'wandering-merchant', 'cyber-bazaar', 'forgotten-archive', 'orbital-station',
+  // v2.10 (iter-20) easter-egg quest
+  'echo-of-claude'
 ];
 
 // -----------------------------------------------------------------

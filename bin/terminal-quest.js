@@ -16,6 +16,10 @@ function parseArgs(argv) {
     const a = argv[i];
     if (a === '-v' || a === '--version') args.version = true;
     else if (a === '-h' || a === '--help') args.help = true;
+    // v2.10 (iter-20): hidden flag, intentionally absent from --help.
+    // Prints a scrolling credits roll + a small ASCII piece. Pure text;
+    // no game state is touched.
+    else if (a === '--credits') args.credits = true;
     else if (a === '--slot') args.slot = argv[++i];
     else if (a.startsWith('--slot=')) args.slot = a.slice(7);
     else if (a === '--lang') args.lang = argv[++i];
@@ -114,6 +118,17 @@ Commands inside the game:
   tts on|off|status toggle optional NPC text-to-speech (see --tts)
   exit              quit
 `);
+}
+
+// v2.10 (iter-20): hidden `--credits` flag. Prints a small ASCII art
+// piece + a slow-scrolling list of contributors. Falls back to a single
+// dump in non-TTY contexts (CI, pipes) so test harnesses don't hang on
+// the timer. Implementation lives in src/credits.js for testability.
+async function runCredits() {
+  const { rollCredits } = require('../src/credits');
+  const fast = !process.stdout.isTTY || process.env.TQ_FAST_CREDITS === '1';
+  await rollCredits({ fast });
+  process.exit(0);
 }
 
 async function runExport(slot) {
@@ -336,6 +351,10 @@ async function main() {
   if (args.help) {
     printHelp();
     process.exit(0);
+  }
+  if (args.credits) {
+    await runCredits();
+    return;
   }
   if (args.listQuests) {
     runListQuests();

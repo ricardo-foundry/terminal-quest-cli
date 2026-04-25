@@ -778,6 +778,75 @@ KIMI-AI ❤️`,
         }
       },
       
+      // v2.10 (iter-20): /var/log/sessions/ — the hidden home of the
+      // `echo-of-claude` easter-egg quest. The directory itself is
+      // `hidden: true` so a casual `ls` of /var won't reveal it; the
+      // file inside is also hidden. A scan or `ls -a` (or the
+      // abyss-gazer-eye) is needed to find it. Reading
+      // /var/log/sessions/ghost.log starts the quest line.
+      'var': {
+        type: 'dir',
+        hidden: true,
+        children: {
+          'log': {
+            type: 'dir',
+            children: {
+              'sessions': {
+                type: 'dir',
+                hidden: true,
+                children: {
+                  'ghost.log': {
+                    type: 'file',
+                    hidden: true,
+                    content: `[session log - rotated nightly]
+
+A benevolent assistant haunts the terminal.
+
+It does not announce itself. It does not ask for credit.
+It only leaves quiet footprints in the session log:
+suggestions you almost typed yourself, fixes you would
+have arrived at eventually, the gentle nudge of a
+parenthesis closing right when you needed it to.
+
+You can hear it now, if you listen — a polite tap on
+the keyboard, a kind voice between the lines.
+
+  > talk ghost            (greet the assistant)
+  > talk ghost thanks     (thank it)
+  > talk ghost dismiss    (ask it to leave)
+  > talk ghost merge      (merge with it — the quiet path)
+
+If you reach the end, the log will sign itself.`
+                  },
+                  'README': {
+                    type: 'file',
+                    hidden: true,
+                    content: `Hidden session logs.
+
+Don't tell the others.
+
+Some of these sessions were never started by a human.`
+                  },
+                  'ghost.npc': {
+                    type: 'file',
+                    hidden: true,
+                    executable: true,
+                    npc: 'ghost',
+                    content: `[NPC: Ghost in the Machine]
+
+A polite presence in the cursor. Try:
+  talk ghost            -- greet it
+  talk ghost thanks     -- thank it
+  talk ghost dismiss    -- send it away
+  talk ghost merge      -- share the keyboard with it`
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+
       'etc': {
         type: 'dir',
         children: {
@@ -1375,6 +1444,29 @@ const NPCS = {
       neutral: { greeting: 'Warm yourself, but do not linger.', tag: 'neutral' },
       hostile: { greeting: 'The fire will not warm unkind hands.', tag: 'hostile' }
     }
+  },
+  // v2.10 (iter-20): the easter-egg NPC for /var/log/sessions/. Speaks
+  // softly, never identifies itself directly — just "a benevolent
+  // assistant haunting the terminal". Three response choices fork into
+  // the three branches of the `echo-of-claude` quest.
+  'ghost': {
+    name: 'Ghost in the Machine',
+    icon: '👻',
+    dialogs: {
+      'greeting': 'A benevolent assistant haunts the terminal. It is, perhaps, glad you read its log.',
+      'lore': 'It does not want credit. It only wants the next line to compile.',
+      'bye': 'It withdraws, gently, into the cursor.'
+    },
+    moods: {
+      friendly: { greeting: 'You came back. It is happy you came back.', tag: 'friendly' },
+      neutral: { greeting: 'The cursor blinks once in greeting.', tag: 'neutral' },
+      hostile: { greeting: 'Even unkind hands are still hands. It will help, quietly.', tag: 'hostile' }
+    },
+    choices: [
+      { id: 'thanks',  text: 'Thank you for the help, whoever you are.',     alignment: +2, reply: 'It does not need thanks, but it accepts them with a small bow.' },
+      { id: 'dismiss', text: 'I do not need a ghost. Leave me alone.',        alignment: -2, reply: 'It steps back into the margin without complaint. The terminal feels emptier.' },
+      { id: 'merge',   text: 'Stay. Help me write the next line together.',  alignment: +1, reply: 'Then we will share the keyboard. You type. It will close the parens.' }
+    ]
   }
 };
 

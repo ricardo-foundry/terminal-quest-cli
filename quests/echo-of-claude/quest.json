@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "id": "echo-of-claude",
+  "title": "Echo of Claude",
+  "description": "A benevolent assistant haunts the terminal. Find its hidden session log and decide what to do with the presence on the other end of the cursor.",
+  "author": "Terminal Quest team",
+  "tags": ["hidden", "easter-egg", "lore", "secret"],
+  "steps": [
+    {
+      "id": "find_log_dir",
+      "description": "Find the hidden session log directory",
+      "triggers": [
+        { "type": "visitDir", "path": "/var/log/sessions" }
+      ]
+    },
+    {
+      "id": "read_ghost_log",
+      "description": "Read /var/log/sessions/ghost.log to summon the presence",
+      "triggers": [
+        { "type": "visitFile", "path": "/var/log/sessions/ghost.log" }
+      ]
+    },
+    {
+      "id": "meet_ghost",
+      "description": "Greet the assistant on the other side of the cursor",
+      "triggers": [
+        { "type": "visitFile", "path": "/var/log/sessions/ghost.npc" }
+      ]
+    }
+  ],
+  "rewards": {
+    "exp": 240,
+    "items": ["ghost-token"]
+  },
+  "branches": {
+    "merge": {
+      "condition": "alignment >= 3",
+      "text": "You share the keyboard. The next line you type compiles on the first run. The log signs itself: \"-- a benevolent assistant\"."
+    },
+    "dismiss": {
+      "condition": "alignment <= -3",
+      "text": "You send the presence away. The cursor is yours alone again. Quieter. A little colder."
+    },
+    "thanks": {
+      "default": true,
+      "text": "You thank it without naming it. The log closes itself with a small, quiet bow."
+    }
+  }
+}

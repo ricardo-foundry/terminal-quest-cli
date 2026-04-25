@@ -288,48 +288,52 @@ async function bootSequence({ skip = false } = {}) {
 }
 
 function helpText() {
+  // v2.10 (iter-20): each section's verb list is sorted alphabetically by
+  // command name so `help` is predictable to scan. Section *ordering*
+  // (Basic -> Advanced -> RPG -> Meta -> Hidden) is semantic and stays
+  // hand-curated — only the rows within a section are alphabetised.
   return {
     basic: () => `
 ${colors.bold('Basic commands:')}
-  ${colors.primary('ls')} [path]       list directory (add -a for hidden)
-  ${colors.primary('cd')} <path>       change directory (~ is home)
   ${colors.primary('cat')} <file>      read a file
-  ${colors.primary('pwd')}             print current path
+  ${colors.primary('cd')} <path>       change directory (~ is home)
   ${colors.primary('clear')}           clear the screen
   ${colors.primary('help')}            show this help
-  ${colors.primary('hint')}            get a hint for the current quest`,
+  ${colors.primary('hint')}            get a hint for the current quest
+  ${colors.primary('ls')} [path]       list directory (add -a for hidden)
+  ${colors.primary('pwd')}             print current path`,
     advanced: () => `
 ${colors.bold('Advanced:')}
-  ${colors.secondary('scan')}           reveal hidden files
-  ${colors.secondary('decode')} <file>  decrypt an encrypted file
-  ${colors.secondary('run')} <game>     run a minigame (snake/guess/matrix/pong/wordle)
   ${colors.secondary('analyze')}        inspect current area
-  ${colors.secondary('hack')}           enter hacker mode
+  ${colors.secondary('decode')} <file>  decrypt an encrypted file
   ${colors.secondary('find')} <name>    search file system
   ${colors.secondary('grep')} <pat> <f> search inside a file
+  ${colors.secondary('hack')}           enter hacker mode
+  ${colors.secondary('run')} <game>     run a minigame (snake/guess/matrix/pong/wordle)
+  ${colors.secondary('scan')}           reveal hidden files
   ${colors.secondary('tree')}           directory tree`,
     rpg: () => `
 ${colors.bold('RPG:')}
-  ${colors.accent('status')}          show character sheet
+  ${colors.accent('achievements')}    achievements
   ${colors.accent('inventory')}       list items
-  ${colors.accent('use')} <item>      use an item
-  ${colors.accent('talk')} <npc>      talk to an NPC
   ${colors.accent('map')}             world map
   ${colors.accent('quests')}          quest log
-  ${colors.accent('achievements')}    achievements
-  ${colors.accent('unlock')} master   use the master key`,
+  ${colors.accent('status')}          show character sheet
+  ${colors.accent('talk')} <npc>      talk to an NPC
+  ${colors.accent('unlock')} master   use the master key
+  ${colors.accent('use')} <item>      use an item`,
     meta: () => `
 ${colors.bold('Meta:')}
-  ${colors.info('save')} [slot]         save to a named slot
+  ${colors.info('exit')}                quit the game
+  ${colors.info('lang')} <code>         en | zh | zh-tw | ja | es
   ${colors.info('load')} <slot>         load a slot
+  ${colors.info('save')} [slot]         save to a named slot
   ${colors.info('saves')}               list save slots
   ${colors.info('theme')} <name>        dark | light | retro
-  ${colors.info('lang')} <code>         en | zh
-  ${colors.info('version')}             show version
-  ${colors.info('exit')}                quit the game`,
+  ${colors.info('version')}             show version`,
     secret: () => `
 ${colors.bold('Hidden:')}
-  ${colors.purple('love')}, ${colors.purple('coffee')}, ${colors.purple('42')}, ${colors.purple('hello')}, ${colors.purple('easteregg')}, ${colors.purple('sudo')}`
+  ${colors.purple('42')}, ${colors.purple('coffee')}, ${colors.purple('easteregg')}, ${colors.purple('hello')}, ${colors.purple('love')}, ${colors.purple('sudo')}`
   };
 }
 

@@ -114,14 +114,14 @@ test('iter-16: execute clamps very long input to 1000 chars', async () => {
   assert.ok(true);
 });
 
-// ---- 6. all 11 quests pass friendly+neutral+hostile via the script ----
-test('iter-16: all 11 quests complete on every branch', () => {
+// ---- 6. all 12 quests pass friendly+neutral+hostile via the script ----
+test('iter-16: all 12 quests complete on every branch', () => {
   const { quests } = loadQuests();
   const ids = quests.map((q) => q.id).sort();
   const expected = [
-    'clockwork-vault', 'cyber-bazaar', 'forgotten-archive', 'ghost-train',
-    'library-cipher', 'midnight-market', 'orbital-station', 'shadow-archive',
-    'silicon-shrine', 'starter-lab', 'wandering-merchant'
+    'clockwork-vault', 'cyber-bazaar', 'echo-of-claude', 'forgotten-archive',
+    'ghost-train', 'library-cipher', 'midnight-market', 'orbital-station',
+    'shadow-archive', 'silicon-shrine', 'starter-lab', 'wandering-merchant'
   ];
   assert.deepEqual(ids, expected, 'unexpected quest set');
   for (const q of quests) {

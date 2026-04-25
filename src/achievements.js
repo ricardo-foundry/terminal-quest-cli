@@ -393,6 +393,26 @@ const EXTRA_ACHIEVEMENTS = {
       const qs = gs.questsState || {};
       return !!(qs.unlock_master && qs.unlock_master.completed);
     }
+  },
+
+  // v2.10 (iter-20) easter egg --------------------------------------------
+  // Hidden achievement awarded for finishing the `echo-of-claude` community
+  // quest (any branch). The achievement itself is hidden from the panel
+  // until it unlocks, matching its lore: a quiet thank-you from the
+  // benevolent assistant haunting the terminal.
+  'ghost_in_the_machine': {
+    id: 'ghost_in_the_machine',
+    name: 'Ghost in the Machine',
+    icon: '👻',
+    desc: 'Finish the echo-of-claude quest (any branch)',
+    reward: '300 EXP',
+    category: 'hidden',
+    hidden: true,
+    unlocked: false,
+    check: (gs) => {
+      const cqs = gs.communityQuestState || {};
+      return !!(cqs['echo-of-claude'] && cqs['echo-of-claude'].done);
+    }
   }
 };
 

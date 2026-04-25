@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (iter-20 — easter egg + polish, no version bump)
+- **Hidden quest `echo-of-claude`** (`quests/echo-of-claude/quest.json`):
+  - Lives at the previously-hidden path `/var/log/sessions/`.
+  - Triggered by `cat /var/log/sessions/ghost.log`.
+  - Theme: a quiet tribute to Claude Code — "a benevolent assistant
+    haunts the terminal" (no direct AI namedrop, in keeping with
+    the in-world voice).
+  - Three branches keyed off alignment: `merge` (>=+3),
+    `dismiss` (<=-3), `thanks` (default neutral).
+  - Drops a `ghost-token` collectible.
+- **`ghost_in_the_machine` achievement** (`src/achievements.js`,
+  hidden category) unlocks on completing any branch of the quest.
+- **New NPC `ghost`** (`data.js#NPCS`) with mood-aware lines and a
+  three-choice dialog tree feeding the quest's branch picker.
+- **Hidden flag `--credits`** (`bin/terminal-quest.js` +
+  `src/credits.js`): scrolling contributor roll with ASCII art.
+  Credits are slow-rolled in TTY mode and one-shot in CI/pipes
+  (controlled by `TQ_FAST_CREDITS=1`). Names: Ricardo
+  (`ricardo-foundry`) and Claude Code.
+
+### Changed (iter-20)
+- **`cmdHelp` is now alphabetised within each section** (`ui.js`).
+  Section ordering (Basic -> Advanced -> RPG -> Meta -> Hidden) stays
+  hand-curated; only the verb rows inside each section sort.
+- Lang line in the `Meta` help block now lists every supported
+  locale (`en | zh | zh-tw | ja | es`) instead of the legacy
+  `en | zh`.
+
+### Tests (iter-20)
+- `test/iter20-easter-polish.test.js` adds 5 new tests covering
+  quest validation + discovery, three-way branch picking, the
+  hidden achievement check, the credits roll content, and that
+  every help section is alphabetised. Total: 348 -> 353 tests.
+
 ### Added (iter-19 — New Game+ and idle detection, no version bump)
 - **New Game+ mode** (`src/ngplus.js`):
   - Unlocked once the player finishes the main story (the
