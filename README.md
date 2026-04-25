@@ -390,3 +390,19 @@ cd terminal-quest-cli && npm install && npm start
 
 找到 3 块密钥碎片（`AW4K3`、`_TH3_`、`4I`），合成主密钥
 `AW4K3_TH3_4I`，输入 `unlock master` 解锁最终秘密。
+
+---
+
+## Sister Projects
+
+If you like Terminal Quest, you may also enjoy:
+
+- **[vampire-survivors-cli](https://github.com/ricardo-foundry/vampire-survivors-cli)** —
+  keyboard-only auto-attack roguelite rendered in box-drawing characters.
+  `npx vampire-survivors-cli`
+- **[openhand](https://github.com/ricardo-foundry/openhand)** — open-source
+  virtual hand-controller that maps gamepads / MIDI / accessibility input to
+  stdin, so you can play TUI games (including this one) with anything.
+  `npx openhand --target terminal-quest`
+
+See [`docs/CROSSPROMO.md`](docs/CROSSPROMO.md) for the full cross-promo policy.
