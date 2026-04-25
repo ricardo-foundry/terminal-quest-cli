@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added (iter-20 — easter egg + polish, no version bump)
+_(no unreleased changes — see [2.8.0] below)_
+
+## [2.8.0] - 2026-04-25
+
+### Added (iter-20 — easter egg + polish)
 - **Hidden quest `echo-of-claude`** (`quests/echo-of-claude/quest.json`):
   - Lives at the previously-hidden path `/var/log/sessions/`.
   - Triggered by `cat /var/log/sessions/ghost.log`.
@@ -27,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (controlled by `TQ_FAST_CREDITS=1`). Names: Ricardo
   (`ricardo-foundry`) and Claude Code.
 
-### Changed (iter-20)
+### Changed (iter-20 — easter egg + polish)
 - **`cmdHelp` is now alphabetised within each section** (`ui.js`).
   Section ordering (Basic -> Advanced -> RPG -> Meta -> Hidden) stays
   hand-curated; only the verb rows inside each section sort.
@@ -41,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   hidden achievement check, the credits roll content, and that
   every help section is alphabetised. Total: 348 -> 353 tests.
 
-### Added (iter-19 — New Game+ and idle detection, no version bump)
+### Added (iter-19 — New Game+ and idle detection)
 - **New Game+ mode** (`src/ngplus.js`):
   - Unlocked once the player finishes the main story (the
     `unlock_master` quest, or any save with `masterUnlocked === true`,
@@ -96,7 +100,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - No new runtime dependencies. No version bump (still v2.8.0).
   Test count rises from 338 to 348.
 
-### Documentation (iter-17 — final consolidation, no version bump)
+### Documentation (iter-17 — final consolidation)
 - New `docs/JOURNEY.md` — end-to-end timeline of iter-1..iter-16
   with theme, headline outcome, and running test count per iter.
 - README badge row gains four counters: tests `338+`, quests `11`,
@@ -111,7 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - No source files in `src/` or `bin/` were touched. No new runtime
   or dev dependencies. Test count stays at **338**.
 
-### Added (iter-16 — deep bug-bash, no version bump)
+### Added (iter-16 — deep bug-bash)
 - `scripts/exhaust-quests.js` — synthesises a `gameState` for every
   quest's friendly / neutral / hostile branch and asserts
   `completed`/`pickBranch` for all 11 quests.
@@ -136,8 +140,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `advance(state, 1e10)`. Now clamps to one in-game year per call
   (120 turns) and tolerates `NaN` / `Infinity`. Reachable via the
   public API even though current call sites already cap inputs.
-
-## [2.8.0] - 2026-04-25 (draft)
 
 ### Added (v2.8 quest pack + TTS — Round 15)
 - **3 new community quests** in `quests/`:
