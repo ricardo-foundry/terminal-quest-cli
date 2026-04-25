@@ -25,6 +25,8 @@ function parseArgs(argv) {
     else if (a === '--no-boot') args.skipBoot = true;
     else if (a === '--no-color' || a === '--no-colors') args.noColor = true;
     else if (a === '--dev') args.dev = true;
+    // v2.8 (iter-15): opt-in text-to-speech for NPC lines. Default off.
+    else if (a === '--tts') args.tts = true;
     else if (a === '--new') args.newSave = true;
     else if (a === '--export-save') args.exportSave = argv[++i];
     else if (a.startsWith('--export-save=')) args.exportSave = a.slice(14);
@@ -72,6 +74,9 @@ Options:
   --export-save <slot>       print the slot's JSON to stdout and exit
   --import-save <file> <slot>  import JSON from <file> into <slot> and exit
   --dev                      developer mode (hot-reloads community quests)
+  --tts                      enable optional text-to-speech for NPC lines
+                             (macOS: say, Linux: espeak, Windows: SAPI;
+                              opt-in; toggle in-game with "tts on|off")
 
 Quests (v2.4):
   --list-quests                       list all quests in ./quests/*/quest.json
@@ -100,6 +105,8 @@ Commands inside the game:
   top [n]           show local leaderboard (default top 10)
   report [slot]     write a Markdown war-story report to ~/.terminal-quest/reports/
   replay [slot]     replay recorded events from the current or named slot
+  tutorial          run the 5-minute new-player tour
+  tts on|off|status toggle optional NPC text-to-speech (see --tts)
   exit              quit
 `);
 }
@@ -353,7 +360,8 @@ async function main() {
     const game = new TerminalGame({
       slot: args.slot,
       skipBoot: !!args.skipBoot,
-      dev: !!args.dev
+      dev: !!args.dev,
+      tts: !!args.tts
     });
     await game.init();
   } catch (err) {

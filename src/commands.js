@@ -101,7 +101,10 @@ const META_COMMANDS = new Set([
   // v2.6 (iter-13): :dev <sub> is the canonical form for developer-only
   // sub-commands. Listing it here suppresses the soft "colon is for meta"
   // warning so `:dev wait-season` runs cleanly.
-  'dev'
+  'dev',
+  // v2.8 (iter-15): tutorial + tts are also meta-shaped (they configure
+  // the CLI rather than acting on the world).
+  'tutorial', 'tts'
 ]);
 
 class CommandSystem {
@@ -274,7 +277,10 @@ class CommandSystem {
       // v2.7 (iter-14) additions
       top: () => this.cmdTop(args),
       leaderboard: () => this.cmdTop(args),
-      report: () => this.cmdReport(args)
+      report: () => this.cmdReport(args),
+      // v2.8 (iter-15) additions
+      tutorial: () => this.cmdTutorial(args),
+      tts: () => this.cmdTts(args)
     };
 
     // v2.4: record the command into the replay buffer if present
@@ -875,6 +881,12 @@ Location: /home/user/.secret/
     console.log(colors.accent(`${npc.icon} ${npc.name}`) + colors.dim(`  (${mood}, affinity ${aff >= 0 ? '+' : ''}${aff})`));
     console.log(colors.info(`  "${greetLine}"`));
 
+    // v2.8 (iter-15): pipe NPC dialogue through TTS when enabled. The
+    // adapter no-ops by default so this never blocks the REPL.
+    if (this.game.tts && this.game.tts.enabled) {
+      try { this.game.tts.speak(`${npc.name}: ${greetLine}`); } catch (_) { /* ignore */ }
+    }
+
     // High-affinity special line + one-time gift
     const special = relMod.specialDialog(this.game.gameState, npcName);
     if (special) {
@@ -1431,7 +1443,11 @@ Thank you for exploring.
       'wait','sleep','look','share','time',
       'replay','communityquests',
       // iter-12
-      'gift','bookmark','bookmarks','goto','season','affinity','?'
+      'gift','bookmark','bookmarks','goto','season','affinity','?',
+      // iter-14
+      'top','leaderboard','report',
+      // iter-15
+      'tutorial','tts'
     ];
     for (const c of known) if (c.startsWith(prefix)) out.add(c);
     // aliases
@@ -1925,6 +1941,75 @@ Thank you for exploring.
   historyDown() {
     if (this.historyIndex < this.history.length - 1) { this.historyIndex++; return this.history[this.historyIndex]; }
     return '';
+  }
+
+  // v2.8 (iter-15) ---------------------------------------------------------
+  // 5-minute new-player tour. The runner is in src/tutorial.js so we can
+  // unit-test the step generator without spinning up a REPL.
+  cmdTutorial(_args) {
+    const { runTutorial } = require('./tutorial');
+    const res = runTutorial(this.game, {
+      print: (line) => {
+        // Headings (start with '[') get coloured; body lines stay plain.
+        if (typeof line === 'string' && /^\[[a-z_]+\]\s/.test(line)) {
+          console.log(colors.bold(line));
+        } else if (typeof line === 'string' && line.startsWith('> try:')) {
+          console.log(colors.gold(line));
+        } else if (typeof line === 'string' && /^\(\d+\/\d+\)$/.test(line)) {
+          console.log(colors.dim(line));
+        } else {
+          console.log(line);
+        }
+      }
+    });
+    console.log(colors.dim(`tutorial: ${res.printed} step(s), ~${Math.round(res.totalSeconds / 60)} min.`));
+  }
+
+  // Toggle the optional TTS engine. `tts on|off|status` are the three
+  // sub-commands. The actual speak() call lives in game.js so every system
+  // line can pipe through it. Mute by default — speech is opt-in.
+  cmdTts(args) {
+    const sub = (args[0] || 'status').toLowerCase();
+    const tts = this.game.tts;
+    if (sub === 'status') {
+      const engineName = (tts && tts.engine && tts.engine.name) || 'none';
+      console.log();
+      console.log(colors.bold('text-to-speech'));
+      console.log(`  enabled:  ${tts && tts.enabled ? colors.success('yes') : colors.dim('no')}`);
+      console.log(`  engine:   ${engineName}`);
+      console.log(colors.dim('  toggle:   `tts on` / `tts off`'));
+      console.log(colors.dim('  start with --tts to enable from boot.'));
+      console.log();
+      return;
+    }
+    if (sub === 'on') {
+      if (!tts) {
+        console.log(colors.error('tts: engine not initialised'));
+        return;
+      }
+      if (!tts.engine || tts.engine.name === 'none') {
+        console.log(colors.error('tts: no supported engine on this platform.'));
+        console.log(colors.dim('  macOS: `say` (built-in)'));
+        console.log(colors.dim('  Linux: install espeak'));
+        console.log(colors.dim('  Windows: PowerShell SAPI is auto-detected'));
+        return;
+      }
+      tts.enabled = true;
+      console.log(colors.success(`tts on (${tts.engine.name})`));
+      // Try a short greeting so the player can verify the engine works.
+      try { tts.speak('Text to speech is enabled.'); } catch (_) { /* ignore */ }
+      return;
+    }
+    if (sub === 'off') {
+      if (tts) {
+        tts.enabled = false;
+        try { tts.close(); } catch (_) { /* ignore */ }
+      }
+      console.log(colors.dim('tts off'));
+      return;
+    }
+    console.log(colors.error(`tts: unknown sub-command "${sub}"`));
+    console.log(colors.dim('  try: tts on | tts off | tts status'));
   }
 }
 

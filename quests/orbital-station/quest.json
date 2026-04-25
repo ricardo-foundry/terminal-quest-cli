@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "id": "orbital-station",
+  "title": "The Orbital Station",
+  "description": "Re-light a dormant orbital relay. The relay only powers up in winter, demands proof of patience, and answers only to operators who have already decoded a master-key fragment.",
+  "author": "Terminal Quest team",
+  "tags": ["winter", "endgame", "relay", "branching", "iter-15"],
+  "steps": [
+    {
+      "id": "find_console",
+      "description": "Reach the system core console",
+      "triggers": [
+        { "type": "visitDir", "path": "/system/core" }
+      ]
+    },
+    {
+      "id": "winter_only",
+      "description": "Power lattice only fires in winter",
+      "triggers": [
+        { "type": "season", "season": "winter" }
+      ]
+    },
+    {
+      "id": "high_level",
+      "description": "Reach level 6 - the relay rejects junior operators",
+      "triggers": [
+        { "type": "level", "min": 6 }
+      ]
+    },
+    {
+      "id": "carry_pass",
+      "description": "Carry a bazaar-pass from the cyber bazaar",
+      "triggers": [
+        { "type": "hasItem", "item": "bazaar-pass" }
+      ]
+    },
+    {
+      "id": "carry_stamp",
+      "description": "Carry an archive-stamp from the forgotten archive",
+      "triggers": [
+        { "type": "hasItem", "item": "archive-stamp" }
+      ]
+    },
+    {
+      "id": "guide_trust",
+      "description": "Build affinity 50 with the guide AI",
+      "triggers": [
+        { "type": "affinity", "npc": "guide", "min": 50 }
+      ]
+    },
+    {
+      "id": "logic_solved",
+      "description": "Pass the relay logic puzzle (gamePlayed: logic)",
+      "triggers": [
+        { "type": "gamePlayed", "name": "logic" }
+      ]
+    },
+    {
+      "id": "fragments_three",
+      "description": "Hold all three master-key fragments",
+      "triggers": [
+        { "type": "keyFragments", "min": 3 }
+      ]
+    }
+  ],
+  "rewards": {
+    "exp": 720,
+    "items": ["orbital-key", "starlight-cell", "relay-medal"]
+  },
+  "branches": {
+    "hero": {
+      "condition": "alignment >= 6 && level >= 7",
+      "text": "The relay bursts to full power. Three orbital lights answer in unison. You hear your own callsign echo back from the void."
+    },
+    "saboteur": {
+      "condition": "alignment <= -6",
+      "text": "You re-route the relay to silent mode and pocket the starlight cell. The void exhales softly."
+    },
+    "operator": {
+      "default": true,
+      "text": "You boot the relay, log the run, and step back. The console hums steady. Mission complete."
+    }
+  }
+}

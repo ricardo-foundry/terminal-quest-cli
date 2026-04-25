@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "id": "cyber-bazaar",
+  "title": "The Cyber Bazaar",
+  "description": "An overlay market boots up at the edge of the network. Brokers only deal in summer, and they only respect couriers who already proved themselves at the wandering merchant's cart.",
+  "author": "Terminal Quest team",
+  "tags": ["summer", "market", "trade", "branching", "iter-15"],
+  "steps": [
+    {
+      "id": "find_bazaar",
+      "description": "Discover the bazaar overlay near the nexus",
+      "triggers": [
+        { "type": "visitDir", "path": "/world/nexus" }
+      ]
+    },
+    {
+      "id": "summer_only",
+      "description": "Brokers only trade in summer (visit while season=summer)",
+      "triggers": [
+        { "type": "season", "season": "summer" }
+      ]
+    },
+    {
+      "id": "merchant_intro",
+      "description": "Carry a merchant-token from a previous run",
+      "triggers": [
+        { "type": "hasItem", "item": "merchant-token" }
+      ]
+    },
+    {
+      "id": "shop_rapport",
+      "description": "Reach affinity 25 with the shop merchant first",
+      "triggers": [
+        { "type": "affinity", "npc": "shop", "min": 25 }
+      ]
+    },
+    {
+      "id": "level_gate",
+      "description": "Reach level 4 - bazaar bouncers turn rookies away",
+      "triggers": [
+        { "type": "level", "min": 4 }
+      ]
+    },
+    {
+      "id": "completed_shrine_run",
+      "description": "Already have a shrine-token from the silicon shrine",
+      "triggers": [
+        { "type": "hasItem", "item": "shrine-token" }
+      ]
+    }
+  ],
+  "rewards": {
+    "exp": 480,
+    "items": ["bazaar-pass", "neon-coin", "encrypted-ledger"]
+  },
+  "branches": {
+    "broker_friend": {
+      "condition": "alignment >= 4",
+      "text": "The lead broker pulls aside the curtain and gifts you the encrypted ledger. \"For the courier with steady hands - we will remember this.\""
+    },
+    "smuggler": {
+      "condition": "alignment <= -4",
+      "text": "You walk out with the ledger under your jacket. The neon flickers. Three brokers note your face on three separate slates."
+    },
+    "fair_buyer": {
+      "default": true,
+      "text": "You pay in shrine-tokens and walk away with the ledger. The bazaar dissolves at sunset."
+    }
+  }
+}

@@ -25,6 +25,7 @@ const seasonMod = require('./season');
 const questsMod = require('./quests');
 const { ReplayRecorder } = require('./replay');
 const { t, setLocale, detectLocale } = require('./i18n');
+const { createTTS } = require('./tts');
 
 const DEFAULT_STATE = {
   currentPath: '/home/user',
@@ -92,7 +93,11 @@ const DEFAULT_STATE = {
   // historyOpened: gate for the Silent Runner achievement. Flips true on
   //   the first `history` invocation and never resets.
   historyOpened: false,
-  playtimeMs: 0
+  playtimeMs: 0,
+  // v2.8 (iter-15): set true when the player runs `tutorial`. We never
+  // reset it; future runs respect the flag to silence the "type cat
+  // start_here.txt" hint.
+  tutorialSeen: false
 };
 
 class TerminalGame {
@@ -116,6 +121,16 @@ class TerminalGame {
     this.exiting = false;
     this.syncAchievements();
     this.syncQuests();
+
+    // v2.8 (iter-15): optional TTS adapter. Always constructed (even when
+    // disabled) so callers can do `this.tts.speak(...)` unconditionally.
+    // The adapter is a no-op when --tts wasn't passed and when no engine
+    // was detected on the host platform.
+    try {
+      this.tts = createTTS({ enabled: !!options.tts });
+    } catch (_) {
+      this.tts = createTTS({ enabled: false, engine: { name: 'none' } });
+    }
 
     // v2.4 additions: community quests + replay recorder
     const loaded = questsMod.loadQuests();

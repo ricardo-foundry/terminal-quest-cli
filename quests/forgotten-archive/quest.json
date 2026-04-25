@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "id": "forgotten-archive",
+  "title": "The Forgotten Archive",
+  "description": "An archive node only un-locks itself in autumn, and only for archivists who have decoded enough of the old shrine-glyphs and built trust with the keeper.",
+  "author": "Terminal Quest team",
+  "tags": ["autumn", "archive", "decode", "branching", "iter-15"],
+  "steps": [
+    {
+      "id": "find_archive",
+      "description": "Walk into the shadow archive",
+      "triggers": [
+        { "type": "visitDir", "path": "/shadow/archive" }
+      ]
+    },
+    {
+      "id": "autumn_or_winter",
+      "description": "The archive only opens in autumn or winter",
+      "triggers": [
+        { "type": "season", "season": ["autumn", "winter"] }
+      ]
+    },
+    {
+      "id": "decode_glyph",
+      "description": "Decode the cipher.enc archive entry",
+      "triggers": [
+        { "type": "decodeFile", "file": "cipher.enc" }
+      ]
+    },
+    {
+      "id": "two_fragments",
+      "description": "Carry at least 2 key fragments",
+      "triggers": [
+        { "type": "keyFragments", "min": 2 }
+      ]
+    },
+    {
+      "id": "keeper_trust",
+      "description": "Build affinity 40 with the keeper",
+      "triggers": [
+        { "type": "affinity", "npc": "keeper", "min": 40 }
+      ]
+    },
+    {
+      "id": "carry_lantern",
+      "description": "Carry a lantern of any kind to read the dark stacks",
+      "triggers": [
+        { "type": "hasItem", "item": "lantern-oil" }
+      ]
+    },
+    {
+      "id": "patient_explorer",
+      "description": "Wait until at least turn 60 - the archive bonds slowly",
+      "triggers": [
+        { "type": "custom", "predicate": "turn >= 60" }
+      ]
+    }
+  ],
+  "rewards": {
+    "exp": 520,
+    "items": ["archive-stamp", "decoded-glyph", "rare-stamp"]
+  },
+  "branches": {
+    "scholar": {
+      "condition": "alignment >= 3 && level >= 5",
+      "text": "The keeper signs your archivist seal. A panel slides open: rows of indexed glyphs, all yours."
+    },
+    "vandal": {
+      "condition": "alignment <= -5",
+      "text": "You crack the seal anyway. The keeper turns away from you for the rest of the season."
+    },
+    "respectful": {
+      "default": true,
+      "text": "You take a single decoded glyph and leave a thank-you note. The archive lock clicks shut behind you."
+    }
+  }
+}

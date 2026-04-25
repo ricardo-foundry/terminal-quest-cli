@@ -7,6 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-04-25 (draft)
+
+### Added (v2.8 quest pack + TTS — Round 15)
+- **3 new community quests** in `quests/`:
+  - `cyber-bazaar` — summer-only market with branching endings
+    (broker_friend / smuggler / fair_buyer). Chains together
+    `season=summer`, `affinity{shop}>=25`, and `hasItem` proofs
+    from earlier quests.
+  - `forgotten-archive` — autumn / winter archivist arc; uses
+    `season` (array form), `affinity{keeper}>=40`, `decodeFile`,
+    `hasItem`, `keyFragments`, and a `custom` predicate
+    (`turn >= 60`) for slow-burn pacing.
+  - `orbital-station` — winter endgame. Requires items from the
+    other two new quests (`bazaar-pass`, `archive-stamp`) plus
+    affinity 50 with the guide AI and all three master-key
+    fragments. Three branches (hero / saboteur / operator).
+- **Optional text-to-speech** (`src/tts.js`):
+  - Auto-detects `say` (macOS), `espeak` / `espeak-ng` (Linux),
+    or PowerShell SAPI (Windows). Falls back to a silent no-op
+    on any other platform.
+  - **Zero new runtime dependencies** — everything is
+    `child_process.spawn` with `shell: false`, ANSI-stripped /
+    control-byte-scrubbed, capped at 500 chars per utterance.
+  - Off by default. Enable with `--tts` at boot, or in-game
+    with `tts on`. `tts status` shows the engine; `tts off`
+    mutes and kills any inflight speech.
+  - NPC dialog (`talk`) is the first surface to be piped through
+    TTS when enabled.
+- **`tutorial` in-game command** (`src/tutorial.js`):
+  - 12-step, ~5-minute new-player walkthrough covering every
+    pillar (navigation, scan/decode, NPCs, gifts, seasons,
+    bookmarks, quests, sharing).
+  - Pure step generator + REPL-friendly runner. The runner
+    NEVER auto-executes commands — it only prints guidance, so
+    re-running `tutorial` is safe at any point in a save.
+  - Soft-grants `took_the_tour` so completion is trackable
+    (achievement metadata can land in a follow-up).
+- **`docs/USER_GUIDE.md`** — full player handbook covering CLI
+  flags, every in-game command, quests, relationships, seasons,
+  achievements, TTS, and save data.
+- **23 new tests** (294 → 317):
+  - `test/tts.test.js` — sanitiser, mock engine spawn capture,
+    `detectEngine` shape, disabled / empty / control-byte paths,
+    `close()` safety.
+  - `test/tutorial.test.js` — step ordering, ~5-min runtime
+    bound, render shape, `runTutorial` side-effects on
+    `tutorialSeen` + achievement list.
+  - `test/iter15-quests.test.js` — validate the three new
+    quests, assert each uses at least one new trigger
+    (`season` / `affinity` / `hasItem`), each has 3+ branches
+    with exactly one default, and the full `loadQuests()` scan
+    surfaces all of them.
+
+### Changed
+- `DEFAULT_STATE` in `src/game.js` gains `tutorialSeen` so future
+  versions can suppress the boot-time "type cat start_here.txt"
+  hint after the tour was viewed.
+- `TerminalGame` constructs a `createTTS()` adapter on init, even
+  when disabled, so call sites can do `this.tts.speak(...)`
+  unconditionally.
+- `bin/terminal-quest.js` learns the `--tts` flag and prints it
+  in `--help`. The in-game help block lists `tutorial` and
+  `tts on|off|status`.
+- `package.json` bumped to **2.8.0**, no new runtime deps (still
+  `chalk`, `figlet`, `keypress`).
+
+### Compatibility
+- Saves are forward-compatible. `tutorialSeen` defaults to false
+  when missing and never breaks an old save.
+- The TTS adapter is a no-op on every platform we cannot detect,
+  so existing CI / headless environments are unaffected.
+
 ## [2.7.0] - 2026-04-25
 
 ### Added (v2.7 locales + leaderboard — Round 14)
