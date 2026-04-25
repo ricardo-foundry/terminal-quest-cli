@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "id": "ghost-train",
+  "title": "The Ghost Train at Platform 0",
+  "description": "A midnight-only train visits the abandoned station. Board it, hear the conductor out, and decide what to do with the lost timetable.",
+  "author": "Terminal Quest team",
+  "tags": ["mid-game", "night", "npc", "choice"],
+  "steps": [
+    {
+      "id": "find_station",
+      "description": "Find the old terminal station",
+      "triggers": [
+        { "type": "visitDir", "path": "/station" }
+      ]
+    },
+    {
+      "id": "read_timetable",
+      "description": "Read the loose timetable on the platform",
+      "triggers": [
+        { "type": "visitFile", "path": "/station/timetable.txt" }
+      ]
+    },
+    {
+      "id": "wait_for_night",
+      "description": "The train only stops between 22:00 and 04:00",
+      "triggers": [
+        { "type": "custom", "predicate": "turn >= 5" }
+      ]
+    },
+    {
+      "id": "talk_conductor",
+      "description": "Speak with the conductor",
+      "triggers": [
+        { "type": "achievementUnlocked", "id": "met_conductor" }
+      ]
+    },
+    {
+      "id": "level_gate",
+      "description": "Be at least level 3",
+      "triggers": [
+        { "type": "level", "min": 3 }
+      ]
+    }
+  ],
+  "rewards": {
+    "exp": 180,
+    "items": ["platform-ticket"]
+  },
+  "branches": {
+    "return_ticket": {
+      "condition": "alignment >= 2",
+      "text": "You return the timetable. The conductor pins a platform-ticket to your lapel and waves the train on."
+    },
+    "keep_ticket": {
+      "condition": "alignment <= -2",
+      "text": "You pocket the timetable. The train leaves without a whistle and the platform lamp flickers out."
+    },
+    "neutral": {
+      "default": true,
+      "text": "You watch the train go. A cold wind carries the smell of old paper."
+    }
+  }
+}

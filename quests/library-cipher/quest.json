@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "id": "library-cipher",
+  "title": "The Library Cipher",
+  "description": "The librarian has a Caesar cipher pinned behind the reference desk. Decode it, play the cipher minigame to win the librarian's trust, and return her missing page.",
+  "author": "Terminal Quest team",
+  "tags": ["mid-game", "npc", "puzzle", "minigame"],
+  "steps": [
+    {
+      "id": "enter_library",
+      "description": "Find the underground library",
+      "triggers": [
+        { "type": "visitDir", "path": "/library" }
+      ]
+    },
+    {
+      "id": "read_pinboard",
+      "description": "Read the pinboard note",
+      "triggers": [
+        { "type": "visitFile", "path": "/library/pinboard.txt" }
+      ]
+    },
+    {
+      "id": "decode_page",
+      "description": "Decode the loose diary page",
+      "triggers": [
+        { "type": "decodeFile", "file": "diary_page.enc" }
+      ]
+    },
+    {
+      "id": "play_cipher",
+      "description": "Solve the librarian's cipher puzzle",
+      "triggers": [
+        { "type": "gamePlayed", "name": "cipher" }
+      ]
+    },
+    {
+      "id": "min_fragments",
+      "description": "Hold at least two key fragments",
+      "triggers": [
+        { "type": "keyFragments", "min": 2 }
+      ]
+    }
+  ],
+  "rewards": {
+    "exp": 240,
+    "items": ["library-card"]
+  },
+  "branches": {
+    "return_page": {
+      "condition": "alignment >= 1",
+      "text": "You hand the decoded page to the librarian. She bows slightly and slides a library-card across the desk."
+    },
+    "keep_page": {
+      "condition": "alignment <= -1",
+      "text": "You fold the page into your pocket. The librarian says nothing; the quiet room gets quieter."
+    },
+    "neutral": {
+      "default": true,
+      "text": "You read the page aloud and leave it on the desk. The librarian nods, unreadable."
+    }
+  }
+}

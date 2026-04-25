@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "id": "midnight-market",
+  "title": "The Midnight Market",
+  "description": "A travelling market only opens after dark. Haggle with the merchant, buy an obscure component, and trade it for the master-key hint.",
+  "author": "Terminal Quest team",
+  "tags": ["late-game", "night", "merchant", "choice"],
+  "steps": [
+    {
+      "id": "reach_shadow",
+      "description": "Enter the shadow realm",
+      "triggers": [
+        { "type": "visitDir", "path": "/shadow" }
+      ]
+    },
+    {
+      "id": "read_flyer",
+      "description": "Read the market flyer",
+      "triggers": [
+        { "type": "visitFile", "path": "/shadow/flyer.txt" }
+      ]
+    },
+    {
+      "id": "night_visit",
+      "description": "Arrive after enough turns have passed",
+      "triggers": [
+        { "type": "custom", "predicate": "turn >= 12" }
+      ]
+    },
+    {
+      "id": "level_gate",
+      "description": "Reach level 5",
+      "triggers": [
+        { "type": "level", "min": 5 }
+      ]
+    },
+    {
+      "id": "finished_morse",
+      "description": "Have at least one morse decode game under your belt",
+      "triggers": [
+        { "type": "gamePlayed", "name": "morse" }
+      ]
+    }
+  ],
+  "rewards": {
+    "exp": 300,
+    "items": ["merchant-token", "lantern-oil"]
+  },
+  "branches": {
+    "generous": {
+      "condition": "alignment >= 3",
+      "text": "The merchant quietly gifts you the final hint. \"For a kind traveller, the stall is free tonight.\""
+    },
+    "thief": {
+      "condition": "alignment <= -3",
+      "text": "You pocket a lantern. The merchant sees you; the lamp behind the stall goes out."
+    },
+    "trade": {
+      "default": true,
+      "text": "You hand over a coin. The merchant scribbles the hint on the back of your ticket."
+    }
+  }
+}
