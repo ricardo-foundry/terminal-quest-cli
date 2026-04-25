@@ -298,6 +298,40 @@ test('--validate-quest on a known-good file exits 0', () => {
   assert.ok(out.startsWith('ok'));
 });
 
+// ---- iter-12: new triggers ----
+test('matchTrigger: season trigger with a single string', () => {
+  // 0 turns = spring
+  assert.equal(matchTrigger({ type: 'season', season: 'spring' }, { turn: 0 }), true);
+  assert.equal(matchTrigger({ type: 'season', season: 'winter' }, { turn: 0 }), false);
+});
+
+test('matchTrigger: season trigger accepts an array', () => {
+  assert.equal(matchTrigger({ type: 'season', season: ['summer', 'autumn'] }, { turn: 35 }), true);
+  assert.equal(matchTrigger({ type: 'season', season: ['summer', 'autumn'] }, { turn: 95 }), false);
+});
+
+test('matchTrigger: affinity threshold', () => {
+  const gs = { npcAffinity: { keeper: 30 } };
+  assert.equal(matchTrigger({ type: 'affinity', npc: 'keeper', min: 20 }, gs), true);
+  assert.equal(matchTrigger({ type: 'affinity', npc: 'keeper', min: 50 }, gs), false);
+  // unknown npc defaults to 0
+  assert.equal(matchTrigger({ type: 'affinity', npc: 'who', min: 1 }, gs), false);
+});
+
+test('matchTrigger: hasItem checks inventory', () => {
+  const gs = { inventory: ['lab-badge', 'morse-card'] };
+  assert.equal(matchTrigger({ type: 'hasItem', item: 'lab-badge' }, gs), true);
+  assert.equal(matchTrigger({ type: 'hasItem', item: 'unknown' }, gs), false);
+});
+
+test('iter-12 quests load successfully', () => {
+  const { quests } = loadQuests();
+  const ids = quests.map((q) => q.id);
+  assert.ok(ids.includes('clockwork-vault'));
+  assert.ok(ids.includes('silicon-shrine'));
+  assert.ok(ids.includes('wandering-merchant'));
+});
+
 test('--validate-quest on a malformed file exits non-zero', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'tq-val-bad-'));
   const bad = path.join(tmp, 'quest.json');

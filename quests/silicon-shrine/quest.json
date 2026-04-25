@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "id": "silicon-shrine",
+  "title": "The Silicon Shrine",
+  "description": "An old AI shrine hums in dots and dashes. Decode three messages in morse to wake whatever sleeps inside.",
+  "author": "Terminal Quest team",
+  "tags": ["puzzle", "morse", "spring", "lore"],
+  "steps": [
+    {
+      "id": "find_shrine",
+      "description": "Find the shrine deep in /world/lab",
+      "triggers": [
+        { "type": "visitDir", "path": "/world/lab" }
+      ]
+    },
+    {
+      "id": "right_season",
+      "description": "Visit the shrine in spring (it only hums when the world is new)",
+      "triggers": [
+        { "type": "season", "season": "spring" }
+      ]
+    },
+    {
+      "id": "morse_warmup",
+      "description": "Complete a morse decode warm-up",
+      "triggers": [
+        { "type": "gamePlayed", "name": "morse" }
+      ]
+    },
+    {
+      "id": "shrine_keeper",
+      "description": "Build trust with the keeper (affinity >= 30)",
+      "triggers": [
+        { "type": "affinity", "npc": "keeper", "min": 30 }
+      ]
+    },
+    {
+      "id": "decode_proof",
+      "description": "Decode the first signal file (cipher.enc in the archive)",
+      "triggers": [
+        { "type": "decodeFile", "file": "cipher.enc" }
+      ]
+    },
+    {
+      "id": "alignment_pure",
+      "description": "Approach the shrine peacefully (alignment >= 0)",
+      "triggers": [
+        { "type": "alignment", "min": 0 }
+      ]
+    }
+  ],
+  "rewards": {
+    "exp": 280,
+    "items": ["shrine-token", "morse-card"]
+  },
+  "branches": {
+    "blessed": {
+      "condition": "alignment >= 5",
+      "text": "The shrine hums a fourth time, just for you. You hear your own name in dots and dashes."
+    },
+    "polite": {
+      "default": true,
+      "text": "The shrine accepts your decoding. Three lights flicker, then go still."
+    }
+  }
+}

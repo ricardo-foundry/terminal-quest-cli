@@ -107,7 +107,24 @@ const DICTS = {
     'ach.reward': 'Reward: {reward}',
     'levelup.title': 'LEVEL UP',
     'levelup.now': 'Lv.{from} → Lv.{to}',
-    'levelup.gained': 'Title: {title}'
+    'levelup.gained': 'Title: {title}',
+
+    // v2.6 (iter-12)
+    'gift.usage':       'Usage: gift <item> to <npc>',
+    'gift.no_item':     "gift: you don't have \"{item}\"",
+    'gift.no_npc':      'gift: unknown NPC "{npc}"',
+    'gift.npc_absent':  'gift: {name} is not here',
+    'gift.received':    '[received: {item}]',
+    'bookmark.usage':   'Usage: bookmark <name>',
+    'bookmark.bad':     'bookmark: name must be 1-32 chars [a-z0-9_-]',
+    'bookmark.set':     'bookmark "{name}" -> {path}',
+    'bookmarks.empty':  '  (none) - try: bookmark home',
+    'goto.usage':       'Usage: goto <bookmark-name>',
+    'goto.unknown':     'goto: no bookmark "{name}"',
+    'goto.gone':        'goto: bookmark target gone: {path}',
+    'season.title':     'Season',
+    'affinity.title':   'NPC affinity',
+    'cheatsheet.title': 'quick reference (?)'
   },
 
   zh: {
@@ -194,7 +211,24 @@ const DICTS = {
     'ach.reward': '奖励: {reward}',
     'levelup.title': '等级提升',
     'levelup.now': 'Lv.{from} → Lv.{to}',
-    'levelup.gained': '称号: {title}'
+    'levelup.gained': '称号: {title}',
+
+    // v2.6 (iter-12)
+    'gift.usage':       '用法: gift <物品> to <NPC>',
+    'gift.no_item':     'gift: 你没有 "{item}"',
+    'gift.no_npc':      'gift: 未知 NPC "{npc}"',
+    'gift.npc_absent':  'gift: {name} 不在这里',
+    'gift.received':    '[获得: {item}]',
+    'bookmark.usage':   '用法: bookmark <名称>',
+    'bookmark.bad':     'bookmark: 名称需 1-32 个字符 [a-z0-9_-]',
+    'bookmark.set':     '已收藏 "{name}" -> {path}',
+    'bookmarks.empty':  '  (空) - 试试: bookmark home',
+    'goto.usage':       '用法: goto <书签名>',
+    'goto.unknown':     'goto: 没有书签 "{name}"',
+    'goto.gone':        'goto: 书签目标已消失: {path}',
+    'season.title':     '季节',
+    'affinity.title':   'NPC 好感度',
+    'cheatsheet.title': '快速参考 (?)'
   },
 
   // Japanese — community-contributed example translation. Covers the
@@ -285,7 +319,24 @@ const DICTS = {
     'ach.reward': '報酬: {reward}',
     'levelup.title': 'レベル アップ',
     'levelup.now': 'Lv.{from} → Lv.{to}',
-    'levelup.gained': '称号: {title}'
+    'levelup.gained': '称号: {title}',
+
+    // v2.6 (iter-12)
+    'gift.usage':       '使い方: gift <アイテム> to <NPC>',
+    'gift.no_item':     'gift: "{item}" を持っていません',
+    'gift.no_npc':      'gift: 不明な NPC "{npc}"',
+    'gift.npc_absent':  'gift: {name} はここにいません',
+    'gift.received':    '[入手: {item}]',
+    'bookmark.usage':   '使い方: bookmark <名前>',
+    'bookmark.bad':     'bookmark: 名前は 1-32 文字 [a-z0-9_-] です',
+    'bookmark.set':     'ブックマーク "{name}" -> {path}',
+    'bookmarks.empty':  '  (なし) - お試し: bookmark home',
+    'goto.usage':       '使い方: goto <ブックマーク名>',
+    'goto.unknown':     'goto: ブックマーク "{name}" がありません',
+    'goto.gone':        'goto: ブックマーク先が消えました: {path}',
+    'season.title':     '季節',
+    'affinity.title':   'NPC の親密度',
+    'cheatsheet.title': 'クイック リファレンス (?)'
   }
 };
 

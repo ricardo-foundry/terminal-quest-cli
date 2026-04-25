@@ -21,6 +21,7 @@ const { EXTRA_ACHIEVEMENTS, evaluateAutoUnlocks } = require('./achievements');
 const { CommandSystem } = require('./commands');
 const saveMod = require('./save');
 const timeMod = require('./time');
+const seasonMod = require('./season');
 const questsMod = require('./quests');
 const { ReplayRecorder } = require('./replay');
 const { t, setLocale, detectLocale } = require('./i18n');
@@ -72,7 +73,14 @@ const DEFAULT_STATE = {
   minAlignmentInit: false,
   questPackTotal: 0,
   questPackDone: 0,
-  communityQuestState: {}
+  communityQuestState: {},
+  // v2.6 (iter-12) additions
+  npcAffinity: {},
+  npcTalkCount: {},
+  giftLog: [],
+  specialItemsGranted: {},
+  bookmarks: {},
+  seasonsSeen: []
 };
 
 class TerminalGame {
@@ -306,7 +314,13 @@ class TerminalGame {
     const phase = this.getPhase();
     const clock = timeMod.formatClock(this.gameState.turn || 0);
     const timeIndicator = colors.dim(`[${phase.icon} ${clock}]`);
-    this.prompt = `${timeIndicator} ${levelIndicator} ${colors.primary('explorer@kimi-os')}:${colors.secondary(displayPath)}$`;
+    const season = seasonMod.getSeason(this.gameState.turn || 0);
+    const seasonIndicator = colors.dim(`[${season.icon}]`);
+    this.prompt = `${seasonIndicator}${timeIndicator} ${levelIndicator} ${colors.primary('explorer@kimi-os')}:${colors.secondary(displayPath)}$`;
+  }
+
+  getSeason() {
+    return seasonMod.getSeason(this.gameState.turn || 0);
   }
 
   showWelcome() {
@@ -485,6 +499,7 @@ class TerminalGame {
 
   // -------- Time & alignment --------
   advanceTime(n = 1) {
+    const before = Number(this.gameState.turn) || 0;
     const res = timeMod.advance(this.gameState, n);
     if (!this.gameState.phasesSeen) this.gameState.phasesSeen = [];
     for (const p of res.newPhases) {
@@ -494,6 +509,20 @@ class TerminalGame {
       if (p.name === 'night') this.gameState.nightVisited = true;
       if (p.name === 'dawn') this.gameState.dawnVisited = true;
     }
+    // v2.6: track season transitions
+    const after = Number(this.gameState.turn) || 0;
+    const newSeasons = seasonMod.seasonsBetween(before, after);
+    if (!this.gameState.seasonsSeen) this.gameState.seasonsSeen = [];
+    const beforeSeason = seasonMod.getSeason(before).name;
+    if (!this.gameState.seasonsSeen.includes(beforeSeason)) {
+      this.gameState.seasonsSeen.push(beforeSeason);
+    }
+    for (const s of newSeasons) {
+      if (!this.gameState.seasonsSeen.includes(s.name)) {
+        this.gameState.seasonsSeen.push(s.name);
+      }
+    }
+    res.newSeasons = newSeasons;
     return res;
   }
 
@@ -532,7 +561,13 @@ class TerminalGame {
         // only complete the last word
         const tokens = trimmed.split(/\s+/);
         const last = tokens[tokens.length - 1] || '';
-        const hits = this.commandSystem.completionsFor(last.toLowerCase());
+        const verb = tokens.length > 1 ? tokens[0].toLowerCase() : null;
+        // v2.6: provide context for talk/use/gift/goto/bookmark when a verb leads.
+        const ctxVerbs = new Set(['talk', 'use', 'gift', 'goto', 'bookmark']);
+        const context = (verb && ctxVerbs.has(verb))
+          ? { verb, argIndex: tokens.length - 1 }
+          : null;
+        const hits = this.commandSystem.completionsFor(last.toLowerCase(), context);
         return [hits.map((h) => colon + (tokens.length === 1 ? h : tokens.slice(0, -1).join(' ') + ' ' + h)), line];
       } catch (_) {
         return [[], line];

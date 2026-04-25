@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "id": "wandering-merchant",
+  "title": "The Wandering Merchant",
+  "description": "A travelling merchant moves cell-by-cell through the world. Find them in a non-winter season, befriend them, and buy a forbidden lantern before they vanish.",
+  "author": "Terminal Quest team",
+  "tags": ["npc", "trade", "moving", "limited-time"],
+  "steps": [
+    {
+      "id": "spot_merchant_anywhere",
+      "description": "Find the wandering merchant somewhere in the shadow realm",
+      "triggers": [
+        { "type": "visitDir", "path": "/shadow/realm" }
+      ]
+    },
+    {
+      "id": "not_winter",
+      "description": "The merchant is closed in winter; come back another season",
+      "triggers": [
+        { "type": "season", "season": ["spring", "summer", "autumn"] }
+      ]
+    },
+    {
+      "id": "warmup_merchant",
+      "description": "Talk to the existing shop NPC at least once to set the tone",
+      "triggers": [
+        { "type": "achievementUnlocked", "id": "first_step" }
+      ]
+    },
+    {
+      "id": "build_trust",
+      "description": "Reach affinity >= 20 with the shop merchant",
+      "triggers": [
+        { "type": "affinity", "npc": "shop", "min": 20 }
+      ]
+    },
+    {
+      "id": "carry_token",
+      "description": "Carry a merchant-token (proof you transacted before)",
+      "triggers": [
+        { "type": "hasItem", "item": "merchant-token" }
+      ]
+    },
+    {
+      "id": "level_gate",
+      "description": "Reach level 4 - the merchant only takes seasoned customers",
+      "triggers": [
+        { "type": "level", "min": 4 }
+      ]
+    }
+  ],
+  "rewards": {
+    "exp": 420,
+    "items": ["forbidden-lantern", "merchant-token", "wanderer-map"]
+  },
+  "branches": {
+    "honest": {
+      "condition": "alignment >= 2",
+      "text": "The merchant slides the lantern over, takes nothing in return, and is gone before you finish saying thank you."
+    },
+    "thief": {
+      "condition": "alignment <= -3",
+      "text": "You pocket the lantern when the merchant looks away. They watch you in the polished side of the cart - they know."
+    },
+    "fair_trade": {
+      "default": true,
+      "text": "You hand over a coin, take the lantern, and the merchant moves to the next cell."
+    }
+  }
+}

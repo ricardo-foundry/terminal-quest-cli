@@ -249,3 +249,117 @@ test('wait without big number does NOT warn', async () => {
   }
   assert.ok(!/capped/i.test(warned), 'wait 5 should not warn; got: ' + warned);
 });
+
+// ---- iter-12: bookmark / goto / season / gift / cheat sheet ----
+
+test('bookmark + bookmarks records a name -> path mapping', async () => {
+  const g = new TerminalGame({ slot: 'cmd-bm-' + Date.now() });
+  g.currentPath = '/home/user';
+  await g.commandSystem.execute('bookmark home');
+  assert.equal(g.gameState.bookmarks.home, '/home/user');
+});
+
+test('bookmark rejects invalid names', async () => {
+  const slot = 'cmd-bmbad-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+  const g = new TerminalGame({ slot });
+  g.currentPath = '/home/user';
+  // start from a known-empty state
+  g.gameState.bookmarks = {};
+  await g.commandSystem.execute('bookmark "has spaces"');
+  // tokenize collapses to one arg; regex rejects spaces -> nothing stored
+  assert.equal(Object.keys(g.gameState.bookmarks || {}).length, 0);
+});
+
+test('goto jumps to a saved bookmark and burns one turn', async () => {
+  const g = new TerminalGame({ slot: 'cmd-go-' + Date.now() });
+  g.currentPath = '/home/user';
+  await g.commandSystem.execute('bookmark home');
+  // walk somewhere else, then jump back
+  await g.commandSystem.execute('cd /system');
+  const turnBefore = g.gameState.turn;
+  await g.commandSystem.execute('goto home');
+  assert.equal(g.currentPath, '/home/user');
+  assert.equal(g.gameState.turn, turnBefore + 1);
+});
+
+test('goto on unknown bookmark errors gracefully', async () => {
+  const g = new TerminalGame({ slot: 'cmd-go2-' + Date.now() });
+  await g.commandSystem.execute('goto missing');
+  // currentPath unchanged
+  assert.equal(g.currentPath, '/home/user');
+});
+
+test('? prints a cheat sheet (no error)', async () => {
+  const g = new TerminalGame({ slot: 'cmd-q-' + Date.now() });
+  // capture console.log output
+  let buf = '';
+  const orig = console.log;
+  console.log = (line) => { buf += String(line) + '\n'; };
+  try {
+    await g.commandSystem.execute('?');
+  } finally {
+    console.log = orig;
+  }
+  assert.match(buf, /quick reference/i);
+});
+
+test('season command is callable and references current season', async () => {
+  const g = new TerminalGame({ slot: 'cmd-season-' + Date.now() });
+  let buf = '';
+  const orig = console.log;
+  console.log = (line) => { buf += String(line) + '\n'; };
+  try {
+    await g.commandSystem.execute('season');
+  } finally {
+    console.log = orig;
+  }
+  assert.match(buf, /Spring|Summer|Autumn|Winter/);
+});
+
+test('advanceTime crosses season boundary and records seasonsSeen', () => {
+  const g = new TerminalGame({ slot: 'cmd-advseason-' + Date.now() });
+  g.gameState.turn = 25;
+  g.gameState.seasonsSeen = ['spring'];
+  g.advanceTime(10); // crosses into summer at 30
+  assert.ok(g.gameState.seasonsSeen.includes('summer'));
+});
+
+test('gift requires the npc to be present and item in inventory', async () => {
+  const g = new TerminalGame({ slot: 'cmd-gift-' + Date.now() });
+  g.currentPath = '/home/user';
+  g.gameState.inventory = ['lab-badge'];
+  // researcher is not at /home/user
+  await g.commandSystem.execute('gift lab-badge to researcher');
+  // affinity should still be 0
+  const rel = require('../src/relationships');
+  assert.equal(rel.getAffinity(g.gameState, 'researcher'), 0);
+  // item NOT consumed (since gift failed)
+  assert.ok(g.gameState.inventory.includes('lab-badge'));
+});
+
+test('completionsFor with talk context returns NPC names', () => {
+  const g = new TerminalGame({ slot: 'cmd-ctxtalk-' + Date.now() });
+  // Move to /world/nexus where the guide.npc is.
+  g.gameState.level = 5;
+  g.currentPath = '/world/nexus';
+  const hits = g.commandSystem.completionsFor('', { verb: 'talk', argIndex: 1 });
+  // hits should mention "guide" (the npc id, with .npc stripped)
+  assert.ok(hits.some((h) => h.includes('guide')), 'expected guide in talk completions: ' + hits.join(','));
+});
+
+test('completionsFor with use context returns inventory items only', () => {
+  const g = new TerminalGame({ slot: 'cmd-ctxuse-' + Date.now() });
+  g.gameState.inventory = ['lab-badge', 'rare-stamp'];
+  const hits = g.commandSystem.completionsFor('lab', { verb: 'use', argIndex: 1 });
+  assert.deepEqual(hits, ['lab-badge']);
+  // commands should NOT show up under context completion
+  const noCmd = g.commandSystem.completionsFor('s', { verb: 'use', argIndex: 1 });
+  assert.ok(!noCmd.includes('status'));
+});
+
+test('completionsFor with goto context returns bookmarks only', () => {
+  const g = new TerminalGame({ slot: 'cmd-ctxgoto-' + Date.now() });
+  g.gameState.bookmarks = { home: '/home/user', vault: '/world/nexus' };
+  const hits = g.commandSystem.completionsFor('', { verb: 'goto', argIndex: 1 });
+  assert.deepEqual(hits.sort(), ['home', 'vault']);
+});

@@ -22,6 +22,8 @@ const saveMod = require('./save');
 const minigames = require('./minigames');
 const shareMod = require('./share');
 const timeMod = require('./time');
+const seasonMod = require('./season');
+const relMod = require('./relationships');
 const { groupByCategory } = require('./achievements');
 
 // Item classification table. Keys are item ids, values describe category & effect.
@@ -248,7 +250,15 @@ class CommandSystem {
       // v2.4 additions
       replay: () => this.cmdReplay(args),
       communityquests: () => this.cmdCommunityQuests(),
-      'community-quests': () => this.cmdCommunityQuests()
+      'community-quests': () => this.cmdCommunityQuests(),
+      // v2.6 (iter-12) additions
+      gift: () => this.cmdGift(args),
+      bookmark: () => this.cmdBookmark(args),
+      bookmarks: () => this.cmdBookmarks(),
+      goto: () => this.cmdGoto(args),
+      season: () => this.cmdSeason(),
+      affinity: () => this.cmdAffinity(args),
+      '?': () => this.cmdCheatSheet()
     };
 
     // v2.4: record the command into the replay buffer if present
@@ -588,7 +598,7 @@ Location: /home/user/.secret/
   // ---- games ----
   async cmdRun(args) {
     if (args.length === 0) {
-      console.log(colors.error('Usage: run <snake|guess|matrix|pong|wordle|qte|logic|morse|chess|cipher>'));
+      console.log(colors.error('Usage: run <snake|guess|matrix|pong|wordle|qte|logic|morse|chess|cipher|sokobax|sliding|connect3>'));
       return;
     }
     const name = args[0].toLowerCase();
@@ -597,10 +607,16 @@ Location: /home/user/.secret/
       chess: 'chessPuzzle',
       cipher: 'cipherDecoder',
       'chess-puzzle': 'chessPuzzle',
-      'cipher-decoder': 'cipherDecoder'
+      'cipher-decoder': 'cipherDecoder',
+      // iter-12
+      sliding: 'slidingPuzzle',
+      'sliding-puzzle': 'slidingPuzzle',
+      'connect-3': 'connect3',
+      connect3: 'connect3',
+      sokoban: 'sokobax'
     };
     const fnName = aliasMap[name] || name;
-    const valid = ['snake', 'guess', 'matrix', 'pong', 'wordle', 'qte', 'logicPuzzle', 'morse', 'chessPuzzle', 'cipherDecoder'];
+    const valid = ['snake', 'guess', 'matrix', 'pong', 'wordle', 'qte', 'logicPuzzle', 'morse', 'chessPuzzle', 'cipherDecoder', 'sokobax', 'slidingPuzzle', 'connect3'];
     if (!valid.includes(fnName)) {
       console.log(colors.error(`run: ${name}: game not found`));
       return;
@@ -795,13 +811,40 @@ Location: /home/user/.secret/
       return;
     }
 
-    const mood = this.game.getNpcMood();
+    // v2.6 (iter-12): some NPCs are seasonally unavailable.
+    const season = seasonMod.getSeason(this.game.gameState.turn || 0);
+    const avail = seasonMod.npcAvailable(npcName, season);
+    if (!avail.open) {
+      console.log(colors.warning(avail.reason));
+      return;
+    }
+
+    // Record talk for affinity (capped) and pull npc-specific mood.
+    relMod.recordTalk(this.game.gameState, npcName);
+    const npcMoodLabel = relMod.moodFor(this.game.gameState, npcName);
+    // Map our 5 affinity moods to the 3 dialog mood blocks the data uses.
+    const mood = (npcMoodLabel === 'adoring' || npcMoodLabel === 'friendly') ? 'friendly'
+      : (npcMoodLabel === 'cold' || npcMoodLabel === 'hostile') ? 'hostile'
+      : this.game.getNpcMood();
     const moodBlock = (npc.moods && npc.moods[mood]) || null;
     const greetLine = (moodBlock && moodBlock.greeting) || npc.dialogs.greeting;
 
     console.log();
-    console.log(colors.accent(`${npc.icon} ${npc.name}`) + colors.dim(`  (${mood})`));
+    const aff = relMod.getAffinity(this.game.gameState, npcName);
+    console.log(colors.accent(`${npc.icon} ${npc.name}`) + colors.dim(`  (${mood}, affinity ${aff >= 0 ? '+' : ''}${aff})`));
     console.log(colors.info(`  "${greetLine}"`));
+
+    // High-affinity special line + one-time gift
+    const special = relMod.specialDialog(this.game.gameState, npcName);
+    if (special) {
+      console.log(colors.gold(`  "${special}"`));
+    }
+    const grant = relMod.specialItem(this.game.gameState, npcName);
+    if (grant) {
+      const inv = this.game.gameState.inventory || [];
+      if (!inv.includes(grant)) inv.push(grant);
+      console.log(colors.gold(`  [received: ${grant}]`));
+    }
 
     if (!this.game.gameState.npcMoodsSeen) this.game.gameState.npcMoodsSeen = [];
     if (!this.game.gameState.npcMoodsSeen.includes(mood)) {
@@ -1296,8 +1339,39 @@ Thank you for exploring.
     }
   }
 
-  completionsFor(prefix) {
+  completionsFor(prefix, context) {
+    // context: { verb: 'talk'|'use'|'gift'|'goto'|'bookmark', argIndex: number }
+    // When provided, restrict completions to context-relevant tokens.
     const out = new Set();
+    if (context && context.verb) {
+      const verb = context.verb;
+      const dir = this.game.resolvePath('.');
+      if (verb === 'talk') {
+        if (dir && dir.children) {
+          for (const [name, item] of Object.entries(dir.children)) {
+            if (item && item.npc) {
+              const id = name.replace('.npc', '');
+              if (id.toLowerCase().startsWith(prefix)) out.add(id);
+            }
+          }
+        }
+        return Array.from(out).sort();
+      }
+      if (verb === 'use' || verb === 'gift') {
+        const inv = (this.game.gameState && this.game.gameState.inventory) || [];
+        for (const item of inv) {
+          if (item.toLowerCase().startsWith(prefix)) out.add(item);
+        }
+        return Array.from(out).sort();
+      }
+      if (verb === 'goto' || verb === 'bookmark') {
+        const bm = (this.game.gameState && this.game.gameState.bookmarks) || {};
+        for (const k of Object.keys(bm)) {
+          if (k.toLowerCase().startsWith(prefix)) out.add(k);
+        }
+        return Array.from(out).sort();
+      }
+    }
     const known = [
       'help','ls','cd','cat','pwd','clear','tree','exit','quit','reboot',
       'find','grep','scan','decode','analyze','hack','run','matrix',
@@ -1305,7 +1379,9 @@ Thank you for exploring.
       'unlock','hint','save','load','saves','theme','lang','version',
       'whoami','date','echo','sudo','alias','unalias','history','complete',
       'wait','sleep','look','share','time',
-      'replay','communityquests'
+      'replay','communityquests',
+      // iter-12
+      'gift','bookmark','bookmarks','goto','season','affinity','?'
     ];
     for (const c of known) if (c.startsWith(prefix)) out.add(c);
     // aliases
@@ -1433,6 +1509,201 @@ Thank you for exploring.
       }
     }
     console.log();
+  }
+
+  // ---- v2.6 (iter-12) commands ----
+  cmdCheatSheet() {
+    console.log();
+    console.log(colors.bold('quick reference (?)'));
+    console.log(colors.dim('-'.repeat(50)));
+    const rows = [
+      ['ls / cd / cat / tree', 'walk the world'],
+      ['scan / decode / hack', 'reveal hidden things'],
+      ['run <game>',           'play a minigame (try `run sokobax`)'],
+      ['talk <npc> [choice]',  'speak with an NPC'],
+      ['gift <item> to <npc>', 'raise affinity'],
+      ['bookmark <name>',      'save current path as bookmark'],
+      ['goto <name>',          'jump to a bookmark (1 turn)'],
+      ['bookmarks',            'list saved bookmarks'],
+      ['use <item>',           'use an inventory item'],
+      ['quests / achievements','review progress'],
+      ['status / inv',         'see character + inventory'],
+      ['wait <n>',             'spend turns (advances time/season)'],
+      ['season / time',        'check world clock + season'],
+      ['hint / help',          'get unstuck'],
+      ['save / load <slot>',   'manage save slots'],
+      ['theme / lang / share', 'meta + share card']
+    ];
+    for (const [c, d] of rows) {
+      console.log('  ' + colors.primary(c.padEnd(22)) + colors.dim(d));
+    }
+    console.log();
+  }
+
+  cmdSeason() {
+    const turn = this.game.gameState.turn || 0;
+    const season = seasonMod.getSeason(turn);
+    const day = seasonMod.dayOfSeason(turn);
+    const year = seasonMod.yearOf(turn);
+    console.log();
+    console.log(colors.bold('Season'));
+    console.log(`  current:  ${season.icon} ${season.label}`);
+    console.log(`  day:      ${day}/${seasonMod.SEASON_LENGTH}`);
+    console.log(`  year:     ${year + 1}`);
+    const seen = this.game.gameState.seasonsSeen || [];
+    console.log(colors.dim(`  seen this run: ${seen.join(', ') || '(none)'}`));
+    console.log();
+  }
+
+  async cmdGift(args) {
+    // syntax: gift <item> to <npc>     OR     gift <item> <npc>
+    if (args.length < 2) {
+      console.log(colors.error('Usage: gift <item> to <npc>'));
+      return;
+    }
+    let toIdx = -1;
+    for (let i = 0; i < args.length; i++) {
+      if (args[i].toLowerCase() === 'to') { toIdx = i; break; }
+    }
+    let item, npcId;
+    if (toIdx > 0 && toIdx < args.length - 1) {
+      item = args.slice(0, toIdx).join(' ');
+      npcId = args.slice(toIdx + 1).join(' ').toLowerCase();
+    } else {
+      // last token is npc, rest is item
+      npcId = args[args.length - 1].toLowerCase();
+      item = args.slice(0, -1).join(' ');
+    }
+
+    const inv = this.game.gameState.inventory || [];
+    if (!inv.includes(item)) {
+      console.log(colors.error(`gift: you don't have "${item}"`));
+      return;
+    }
+    if (!NPCS[npcId]) {
+      console.log(colors.error(`gift: unknown NPC "${npcId}"`));
+      return;
+    }
+    // Must be co-located with the NPC.
+    const dir = this.game.resolvePath('.');
+    const npcHere = dir && dir.children && Object.keys(dir.children)
+      .some((n) => n.toLowerCase().includes(npcId) && dir.children[n].npc);
+    if (!npcHere) {
+      console.log(colors.error(`gift: ${NPCS[npcId].name} is not here`));
+      return;
+    }
+    // Apply.
+    const res = relMod.giveGift(this.game.gameState, npcId, item);
+    if (!res.ok) {
+      console.log(colors.error('gift failed'));
+      return;
+    }
+    // Remove the item from inventory.
+    const idx = inv.indexOf(item);
+    if (idx >= 0) inv.splice(idx, 1);
+    const sign = res.delta >= 0 ? colors.success(`+${res.delta}`) : colors.error(`${res.delta}`);
+    console.log();
+    console.log(`${colors.accent(NPCS[npcId].icon + ' ' + NPCS[npcId].name)}: "${res.ack}"`);
+    console.log(colors.dim(`  affinity ${sign} -> ${res.affinity}  (mood: ${relMod.moodFor(this.game.gameState, npcId)})`));
+
+    // Maybe grant a special item if newly adoring.
+    const grant = relMod.specialItem(this.game.gameState, npcId);
+    if (grant) {
+      if (!inv.includes(grant)) inv.push(grant);
+      console.log(colors.gold(`  [received: ${grant}]`));
+    }
+    console.log();
+    await this.game.evaluateAutoAchievements();
+  }
+
+  cmdAffinity(args) {
+    const map = this.game.gameState.npcAffinity || {};
+    if (args[0]) {
+      const id = args[0].toLowerCase();
+      const v = relMod.getAffinity(this.game.gameState, id);
+      const m = relMod.moodFor(this.game.gameState, id);
+      console.log(`  ${id}: ${v}  (${m})`);
+      return;
+    }
+    console.log();
+    console.log(colors.bold('NPC affinity'));
+    console.log(colors.dim('-'.repeat(40)));
+    const ids = Object.keys(NPCS);
+    for (const id of ids) {
+      const v = relMod.getAffinity(this.game.gameState, id);
+      const m = relMod.moodFor(this.game.gameState, id);
+      const bar = v >= 0
+        ? colors.success('+'.repeat(Math.min(10, Math.floor(v / 10))))
+        : colors.error('-'.repeat(Math.min(10, Math.floor(Math.abs(v) / 10))));
+      console.log(`  ${id.padEnd(12)} ${String(v).padStart(4)}  ${m.padEnd(9)} ${bar}`);
+    }
+    console.log();
+  }
+
+  cmdBookmark(args) {
+    const name = (args[0] || '').trim();
+    if (!name) {
+      console.log(colors.error('Usage: bookmark <name>'));
+      return;
+    }
+    if (!/^[a-zA-Z0-9_\-]{1,32}$/.test(name)) {
+      console.log(colors.error('bookmark: name must be 1-32 chars [a-z0-9_-]'));
+      return;
+    }
+    if (!this.game.gameState.bookmarks) this.game.gameState.bookmarks = {};
+    this.game.gameState.bookmarks[name] = this.game.currentPath;
+    console.log(colors.success(`bookmark "${name}" -> ${this.game.currentPath}`));
+  }
+
+  cmdBookmarks() {
+    const bm = this.game.gameState.bookmarks || {};
+    console.log();
+    console.log(colors.bold('Bookmarks'));
+    console.log(colors.dim('-'.repeat(40)));
+    const keys = Object.keys(bm).sort();
+    if (keys.length === 0) {
+      console.log(colors.dim('  (none) - try: bookmark home'));
+    } else {
+      for (const k of keys) {
+        console.log(`  ${colors.primary(k.padEnd(20))} ${colors.dim(bm[k])}`);
+      }
+    }
+    console.log();
+  }
+
+  cmdGoto(args) {
+    const name = (args[0] || '').trim();
+    if (!name) {
+      console.log(colors.error('Usage: goto <bookmark-name>'));
+      return;
+    }
+    const bm = this.game.gameState.bookmarks || {};
+    if (!bm[name]) {
+      console.log(colors.error(`goto: no bookmark "${name}"`));
+      console.log(colors.dim('  tip: type `bookmarks` to list saved paths.'));
+      return;
+    }
+    const target = bm[name];
+    const dir = this.game.getDirByPath(target);
+    if (!dir || dir.type !== 'dir') {
+      console.log(colors.error(`goto: bookmark target gone: ${target}`));
+      return;
+    }
+    // gating like cd
+    const phase = this.game.getPhase();
+    const rule = timeMod.accessRule(target, phase);
+    if (!rule.allowed) {
+      console.log(colors.error(rule.reason));
+      return;
+    }
+    this.game.currentPath = target;
+    this.game.updatePrompt();
+    if (!this.game.gameState.visitedDirs.includes(target)) {
+      this.game.gameState.visitedDirs.push(target);
+    }
+    // bookmarks burn one turn (still cheaper than re-walking).
+    this.game.advanceTime(1);
+    console.log(colors.dim(`-> ${target}`));
   }
 
   historyUp() {

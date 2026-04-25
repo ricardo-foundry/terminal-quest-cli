@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "id": "clockwork-vault",
+  "title": "The Clockwork Vault",
+  "description": "Beneath the nexus, a vault of brass gears guards a stolen secret. Get inside, take the master gear, get out — without breaking the clock.",
+  "author": "Terminal Quest team",
+  "tags": ["heist", "puzzle", "mid-game"],
+  "steps": [
+    {
+      "id": "find_vault",
+      "description": "Find the hidden door under /world/nexus",
+      "triggers": [
+        { "type": "visitDir", "path": "/world/nexus" }
+      ]
+    },
+    {
+      "id": "warm_up_logic",
+      "description": "Solve the logic gate puzzle to wake the vault",
+      "triggers": [
+        { "type": "gamePlayed", "name": "logic" }
+      ]
+    },
+    {
+      "id": "key_check",
+      "description": "Carry at least one key fragment for leverage",
+      "triggers": [
+        { "type": "keyFragments", "min": 1 }
+      ]
+    },
+    {
+      "id": "level_gate",
+      "description": "Reach level 3 first - the gears spin too fast for novices",
+      "triggers": [
+        { "type": "level", "min": 3 }
+      ]
+    },
+    {
+      "id": "after_dusk",
+      "description": "Approach the vault after dusk (turn >= 12 in current cycle)",
+      "triggers": [
+        { "type": "custom", "predicate": "turn >= 12" }
+      ]
+    },
+    {
+      "id": "steal_gear",
+      "description": "Take the master gear (recorded as `master-gear` in your inventory)",
+      "triggers": [
+        { "type": "hasItem", "item": "master-gear" }
+      ]
+    }
+  ],
+  "rewards": {
+    "exp": 350,
+    "items": ["clockwork-cog", "vault-pass"]
+  },
+  "branches": {
+    "clean": {
+      "condition": "alignment >= 1",
+      "text": "You replaced the master gear with a perfect copy. The clock keeps time, and so do you."
+    },
+    "rough": {
+      "condition": "alignment <= -3",
+      "text": "You smashed the lock and ran. Half the city's watches will be late tomorrow because of you."
+    },
+    "clever": {
+      "default": true,
+      "text": "You took the gear, slid the bolt, and walked back out the way you came. Nothing else stirred."
+    }
+  }
+}

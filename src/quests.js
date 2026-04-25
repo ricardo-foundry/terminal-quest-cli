@@ -54,7 +54,9 @@ const DEFAULT_QUESTS_DIR = path.join(__dirname, '..', 'quests');
 // Allowed trigger types - anything else is reported but ignored.
 const TRIGGER_TYPES = new Set([
   'visitDir', 'visitFile', 'decodeFile', 'keyFragments',
-  'level', 'alignment', 'gamePlayed', 'achievementUnlocked', 'custom'
+  'level', 'alignment', 'gamePlayed', 'achievementUnlocked', 'custom',
+  // iter-12 additions
+  'season', 'affinity', 'hasItem'
 ]);
 
 /**
@@ -214,6 +216,27 @@ function matchTrigger(trigger, gs) {
         return (gs.achievements || []).includes(trigger.id);
       case 'custom':
         return evalCustomPredicate(trigger.predicate, gs);
+      case 'season': {
+        // accepts trigger.season as a string or array of strings
+        // re-implemented inline so we don't pull in season.js (avoid cycles)
+        const t = Number(gs.turn) || 0;
+        const yearLen = 4 * 30;
+        const wrapped = ((t % yearLen) + yearLen) % yearLen;
+        const idx = Math.floor(wrapped / 30);
+        const cur = ['spring', 'summer', 'autumn', 'winter'][idx];
+        const want = trigger.season;
+        if (Array.isArray(want)) return want.includes(cur);
+        return cur === want;
+      }
+      case 'affinity': {
+        const map = (gs.npcAffinity && typeof gs.npcAffinity === 'object') ? gs.npcAffinity : {};
+        const cur = Number(map[trigger.npc]) || 0;
+        if (typeof trigger.min === 'number' && cur < trigger.min) return false;
+        if (typeof trigger.max === 'number' && cur > trigger.max) return false;
+        return true;
+      }
+      case 'hasItem':
+        return (gs.inventory || []).includes(trigger.item);
       default:
         return false;
     }

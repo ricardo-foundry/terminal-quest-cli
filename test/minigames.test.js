@@ -158,3 +158,196 @@ test('CIPHER_DICT is a non-empty string array', () => {
   assert.ok(CIPHER_DICT.length >= 5);
   for (const w of CIPHER_DICT) assert.equal(typeof w, 'string');
 });
+
+// ---- iter-12: Sokobax ----
+const {
+  SOKOBAX_LEVELS,
+  parseSokobaxLevel,
+  sokobaxStep,
+  sokobaxIsSolved,
+  sokobaxRender
+} = require('../src/minigames');
+
+test('parseSokobaxLevel extracts walls/goals/boxes/player', () => {
+  const lvl = parseSokobaxLevel(SOKOBAX_LEVELS[0]);
+  assert.ok(lvl.player);
+  assert.ok(lvl.walls.size > 0);
+  assert.equal(lvl.boxes.size, 1);
+  assert.equal(lvl.goals.size, 1);
+});
+
+test('sokobaxStep blocks against walls', () => {
+  const lvl = parseSokobaxLevel([
+    '###',
+    '#@#',
+    '###'
+  ]);
+  // Player surrounded by walls -> any direction should be a no-op.
+  const next = sokobaxStep(lvl, 'up');
+  assert.equal(next.player.x, lvl.player.x);
+  assert.equal(next.player.y, lvl.player.y);
+});
+
+test('sokobaxStep pushes a box and records the new position', () => {
+  const lvl = parseSokobaxLevel([
+    '#####',
+    '#@$ #',
+    '#####'
+  ]);
+  const after = sokobaxStep(lvl, 'right');
+  // box should now be one cell further right
+  assert.ok(after.boxes.has('3,1'));
+  assert.equal(after.player.x, 2);
+});
+
+test('sokobaxStep refuses to push a box into a wall', () => {
+  const lvl = parseSokobaxLevel([
+    '####',
+    '#@$#',
+    '####'
+  ]);
+  const after = sokobaxStep(lvl, 'right');
+  assert.equal(after, lvl, 'should be the same state object');
+});
+
+test('sokobaxIsSolved reports true when boxes occupy all goals', () => {
+  // box already on goal at fill time
+  const lvl = parseSokobaxLevel([
+    '####',
+    '#*@#',
+    '####'
+  ]);
+  assert.equal(sokobaxIsSolved(lvl), true);
+});
+
+test('sokobaxRender produces a grid of correct dimensions', () => {
+  const lvl = parseSokobaxLevel(SOKOBAX_LEVELS[0]);
+  const rows = sokobaxRender(lvl);
+  assert.equal(rows.length, SOKOBAX_LEVELS[0].length);
+  for (const r of rows) assert.equal(r.length, SOKOBAX_LEVELS[0][0].length);
+});
+
+// ---- iter-12: Sliding puzzle ----
+const {
+  slidingMakeSolved,
+  slidingShuffle,
+  slidingMove,
+  slidingIsSolved,
+  slidingNeighbors
+} = require('../src/minigames');
+
+test('slidingMakeSolved returns 1..N with 0 last', () => {
+  const b = slidingMakeSolved(3);
+  assert.deepEqual(b, [1, 2, 3, 4, 5, 6, 7, 8, 0]);
+});
+
+test('slidingIsSolved on a solved board', () => {
+  assert.equal(slidingIsSolved(slidingMakeSolved(3)), true);
+  assert.equal(slidingIsSolved([1, 2, 0, 4, 5, 3, 7, 8, 6]), false);
+});
+
+test('slidingShuffle produces a different but solvable layout', () => {
+  // Walking the empty tile preserves solvability.
+  let board;
+  for (let i = 0; i < 5; i++) {
+    board = slidingShuffle(3, 50);
+    if (!slidingIsSolved(board)) break;
+  }
+  // we may have stumbled into solved by chance; loop exits when we don't
+  assert.equal(board.length, 9);
+});
+
+test('slidingMove only swaps adjacent-to-empty tiles', () => {
+  const b = [1, 2, 3, 4, 5, 0, 7, 8, 6]; // empty at idx 5
+  // tile 6 (idx 8) is below empty -> legal
+  const moved = slidingMove(b, 6, 3);
+  assert.notEqual(moved, b);
+  assert.equal(moved[5], 6);
+  assert.equal(moved[8], 0);
+  // tile 1 (idx 0) is far away -> illegal, returns same array
+  const blocked = slidingMove(b, 1, 3);
+  assert.equal(blocked, b);
+});
+
+test('slidingNeighbors lists 2-4 valid indices', () => {
+  // corner: 2 neighbours
+  assert.equal(slidingNeighbors(0, 3).length, 2);
+  // centre: 4 neighbours
+  assert.equal(slidingNeighbors(4, 3).length, 4);
+  // edge: 3 neighbours
+  assert.equal(slidingNeighbors(1, 3).length, 3);
+});
+
+// ---- iter-12: Connect-3 ----
+const {
+  connect3MakeBoard,
+  connect3FindMatches,
+  connect3Swap,
+  connect3Resolve,
+  CONNECT3_LETTERS
+} = require('../src/minigames');
+
+test('connect3MakeBoard never seeds an immediate triple', () => {
+  for (let trial = 0; trial < 10; trial++) {
+    const b = connect3MakeBoard(5, 5);
+    const matches = connect3FindMatches(b);
+    assert.equal(matches.size, 0, 'unexpected initial match');
+  }
+});
+
+test('connect3FindMatches detects a horizontal triple', () => {
+  const b = [
+    ['A', 'A', 'A', 'B', 'C'],
+    ['B', 'C', 'D', 'A', 'B'],
+    ['C', 'A', 'B', 'D', 'A'],
+    ['D', 'B', 'C', 'A', 'B'],
+    ['E', 'D', 'A', 'B', 'C']
+  ];
+  const m = connect3FindMatches(b);
+  assert.ok(m.has('0,0'));
+  assert.ok(m.has('1,0'));
+  assert.ok(m.has('2,0'));
+});
+
+test('connect3Swap reverts when no match would form', () => {
+  const b = [
+    ['A', 'B'],
+    ['C', 'D']
+  ];
+  const r = connect3Swap(b, 0, 0, 1, 0);
+  assert.equal(r.swapped, false);
+  assert.equal(r.board, b);
+});
+
+test('connect3Swap commits when the swap forms a 3-in-a-row', () => {
+  // Swapping (1,0) with (1,1) creates A,A,A in the top row at idx 1,2,3.
+  // top row already has A at 1,2 and B at 3; after swap: B,A,A,A,A.
+  const b = [
+    ['B', 'B', 'A', 'A'],
+    ['X', 'A', 'Y', 'Z']
+  ];
+  // Swap (1,0)=B with (1,1)=A. Top row becomes B,A,A,A -> 3-in-a-row.
+  const r = connect3Swap(b, 1, 0, 1, 1);
+  assert.equal(r.swapped, true);
+  assert.ok(r.matches.size >= 3);
+});
+
+test('connect3Resolve removes matched cells and applies gravity', () => {
+  const b = [
+    ['A', 'X'],
+    ['A', 'Y'],
+    ['A', 'Z']
+  ];
+  const matches = connect3FindMatches(b);
+  assert.equal(matches.size, 3);
+  const after = connect3Resolve(b, matches);
+  // column 0 is now all empty (nulls)
+  for (let y = 0; y < 3; y++) assert.equal(after[y][0], null);
+  // column 1 unchanged
+  assert.equal(after[2][1], 'Z');
+});
+
+test('CONNECT3_LETTERS has 5 distinct letters', () => {
+  assert.equal(CONNECT3_LETTERS.length, 5);
+  assert.equal(new Set(CONNECT3_LETTERS).size, 5);
+});

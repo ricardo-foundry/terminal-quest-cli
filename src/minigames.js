@@ -961,6 +961,466 @@ async function cipherDecoder(game) {
   });
 }
 
+// --- iter-12: Sokobax (push-the-box, single-screen sokoban) ---
+// Pure level model + step function. Levels are tiny ASCII grids:
+//   '#' wall   '.' goal   '$' box   '@' player   ' ' floor
+// Encoded levels keep boxes/goals/player as separate maps so we can
+// render goals under boxes correctly.
+const SOKOBAX_LEVELS = [
+  [
+    '########',
+    '#  .   #',
+    '# $    #',
+    '#  @   #',
+    '#      #',
+    '########'
+  ],
+  [
+    '#######',
+    '#.   .#',
+    '# $$  #',
+    '# @   #',
+    '#######'
+  ]
+];
+
+function parseSokobaxLevel(rows) {
+  const walls = new Set();
+  const goals = new Set();
+  const boxes = new Set();
+  let player = null;
+  for (let y = 0; y < rows.length; y++) {
+    const line = rows[y];
+    for (let x = 0; x < line.length; x++) {
+      const ch = line[x];
+      const k = x + ',' + y;
+      if (ch === '#') walls.add(k);
+      else if (ch === '.') goals.add(k);
+      else if (ch === '$') boxes.add(k);
+      else if (ch === '@') player = { x, y };
+      else if (ch === '*') { boxes.add(k); goals.add(k); }
+      else if (ch === '+') { player = { x, y }; goals.add(k); }
+    }
+  }
+  return { walls, goals, boxes, player, w: rows[0].length, h: rows.length };
+}
+
+function sokobaxStep(state, dir) {
+  // dir: 'up'|'down'|'left'|'right'
+  const dx = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;
+  const dy = dir === 'up' ? -1 : dir === 'down' ? 1 : 0;
+  if (dx === 0 && dy === 0) return state;
+  const nx = state.player.x + dx;
+  const ny = state.player.y + dy;
+  const nk = nx + ',' + ny;
+  if (state.walls.has(nk)) return state;
+  // pushing a box?
+  if (state.boxes.has(nk)) {
+    const bx = nx + dx;
+    const by = ny + dy;
+    const bk = bx + ',' + by;
+    if (state.walls.has(bk) || state.boxes.has(bk)) return state;
+    const newBoxes = new Set(state.boxes);
+    newBoxes.delete(nk);
+    newBoxes.add(bk);
+    return { ...state, boxes: newBoxes, player: { x: nx, y: ny } };
+  }
+  return { ...state, player: { x: nx, y: ny } };
+}
+
+function sokobaxIsSolved(state) {
+  if (!state || !state.goals || !state.boxes) return false;
+  if (state.boxes.size !== state.goals.size) return false;
+  for (const g of state.goals) if (!state.boxes.has(g)) return false;
+  return true;
+}
+
+function sokobaxRender(state) {
+  const out = [];
+  for (let y = 0; y < state.h; y++) {
+    let line = '';
+    for (let x = 0; x < state.w; x++) {
+      const k = x + ',' + y;
+      if (state.walls.has(k)) line += '#';
+      else if (state.player && state.player.x === x && state.player.y === y) {
+        line += state.goals.has(k) ? '+' : '@';
+      } else if (state.boxes.has(k)) {
+        line += state.goals.has(k) ? '*' : '$';
+      } else if (state.goals.has(k)) line += '.';
+      else line += ' ';
+    }
+    out.push(line);
+  }
+  return out;
+}
+
+async function sokobax(game, opts = {}) {
+  const levelIdx = Math.min(SOKOBAX_LEVELS.length - 1, Math.max(0, opts.level || 0));
+  let state = parseSokobaxLevel(SOKOBAX_LEVELS[levelIdx]);
+  const maxMoves = opts.maxMoves || 60;
+  let moves = 0;
+
+  console.clear();
+  console.log(colors.bold('Sokobax — push every $ onto a .'));
+  console.log(colors.dim('w/a/s/d to move, r reset, q quit. Boxes only push.'));
+  console.log();
+
+  const draw = () => {
+    if (!process.stdout.isTTY) return;
+    process.stdout.write('\x1b[3;1H');
+    for (const row of sokobaxRender(state)) console.log('  ' + row);
+    console.log(colors.dim(`  moves: ${moves}/${maxMoves}`));
+  };
+
+  return new Promise((resolve) => {
+    let done = false;
+    const cleanup = setupKeyListener((key) => {
+      if (done) return;
+      if (key === 'q' || key === 'Q') { finish(false); return; }
+      if (key === 'r' || key === 'R') {
+        state = parseSokobaxLevel(SOKOBAX_LEVELS[levelIdx]);
+        moves = 0;
+        draw();
+        return;
+      }
+      let dir = null;
+      if (key === 'w' || key === 'W' || key === '[A') dir = 'up';
+      else if (key === 's' || key === 'S' || key === '[B') dir = 'down';
+      else if (key === 'a' || key === 'A' || key === '[D') dir = 'left';
+      else if (key === 'd' || key === 'D' || key === '[C') dir = 'right';
+      if (!dir) return;
+      const next = sokobaxStep(state, dir);
+      if (next !== state) { moves++; state = next; }
+      draw();
+      if (sokobaxIsSolved(state)) { finish(true); return; }
+      if (moves >= maxMoves) finish(false);
+    });
+
+    const finish = (win) => {
+      if (done) return;
+      done = true;
+      cleanup();
+      console.log();
+      if (win) {
+        const exp = Math.max(20, 80 - moves);
+        console.log(colors.success(`solved in ${moves} moves`));
+        console.log(colors.gold(`+${exp} EXP`));
+        if (game && game.addExp) game.addExp(exp, 'sokobax').catch(() => {});
+        if (game && game.gameState) game.gameState.sokobaxSolved = true;
+        resolve({ completed: true, win: true, score: moves });
+      } else {
+        console.log(colors.dim('sokobax: aborted'));
+        resolve({ completed: false, win: false, score: moves });
+      }
+    };
+
+    draw();
+  });
+}
+
+// --- iter-12: Sliding puzzle (15-puzzle style, configurable size) ---
+// Pure helpers so tests can drive moves and check solvability without a TTY.
+function slidingMakeSolved(size = 3) {
+  const tiles = [];
+  for (let i = 0; i < size * size - 1; i++) tiles.push(i + 1);
+  tiles.push(0);
+  return tiles;
+}
+
+function slidingShuffle(size = 3, moves = 30, rng = Math.random) {
+  // Generate a guaranteed-solvable board by walking the empty tile randomly.
+  let board = slidingMakeSolved(size);
+  let empty = board.length - 1;
+  for (let i = 0; i < moves; i++) {
+    const neigh = slidingNeighbors(empty, size);
+    const pick = neigh[Math.floor(rng() * neigh.length)];
+    [board[empty], board[pick]] = [board[pick], board[empty]];
+    empty = pick;
+  }
+  return board;
+}
+
+function slidingNeighbors(idx, size) {
+  const x = idx % size;
+  const y = Math.floor(idx / size);
+  const out = [];
+  if (x > 0) out.push(idx - 1);
+  if (x < size - 1) out.push(idx + 1);
+  if (y > 0) out.push(idx - size);
+  if (y < size - 1) out.push(idx + size);
+  return out;
+}
+
+function slidingMove(board, tile, size) {
+  // Move the tile with value `tile` into the empty slot if adjacent.
+  // Returns new board (or same board if illegal).
+  const idx = board.indexOf(tile);
+  const empty = board.indexOf(0);
+  if (idx < 0 || empty < 0) return board;
+  if (!slidingNeighbors(empty, size).includes(idx)) return board;
+  const next = board.slice();
+  next[empty] = tile;
+  next[idx] = 0;
+  return next;
+}
+
+function slidingIsSolved(board) {
+  for (let i = 0; i < board.length - 1; i++) {
+    if (board[i] !== i + 1) return false;
+  }
+  return board[board.length - 1] === 0;
+}
+
+async function slidingPuzzle(game, opts = {}) {
+  const size = opts.size || 3;
+  let board = slidingShuffle(size, opts.shuffle || 30);
+  const maxMoves = opts.maxMoves || 200;
+  let moves = 0;
+
+  console.clear();
+  console.log(colors.bold(`Sliding puzzle — ${size}x${size}`));
+  console.log(colors.dim('Type a tile number to slide it into the empty slot. q to quit.'));
+  console.log();
+
+  const render = () => {
+    const out = [];
+    for (let y = 0; y < size; y++) {
+      let line = '  ';
+      for (let x = 0; x < size; x++) {
+        const v = board[y * size + x];
+        line += (v === 0 ? '  .' : String(v).padStart(3, ' ')) + ' ';
+      }
+      out.push(line);
+    }
+    return out.join('\n');
+  };
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (r) => { if (done) return; done = true; rl.close(); resolve(r); };
+    const ask = () => {
+      if (done) return;
+      console.log(render());
+      console.log(colors.dim(`  moves: ${moves}/${maxMoves}`));
+      if (slidingIsSolved(board)) {
+        const exp = Math.max(30, 120 - moves);
+        console.log(colors.success(`solved in ${moves} moves`));
+        console.log(colors.gold(`+${exp} EXP`));
+        if (game && game.addExp) game.addExp(exp, 'sliding').catch(() => {});
+        if (game && game.gameState) game.gameState.slidingSolved = true;
+        finish({ completed: true, win: true, score: moves });
+        return;
+      }
+      if (moves >= maxMoves) {
+        console.log(colors.error('out of moves'));
+        finish({ completed: true, win: false, score: moves });
+        return;
+      }
+      rl.question(colors.bold('tile: '), (input) => {
+        if (done) return;
+        const s = (input || '').trim().toLowerCase();
+        if (s === 'q' || s === 'quit') { finish({ completed: false, win: false, score: moves }); return; }
+        const n = parseInt(s, 10);
+        if (!Number.isFinite(n) || n < 1 || n > size * size - 1) {
+          console.log(colors.error(`enter a number 1-${size * size - 1}`));
+          ask();
+          return;
+        }
+        const next = slidingMove(board, n, size);
+        if (next === board) {
+          console.log(colors.warning('that tile is not adjacent to the empty slot'));
+        } else {
+          board = next;
+          moves++;
+        }
+        ask();
+      });
+    };
+    rl.on('close', () => finish({ completed: false, win: false, score: moves }));
+    ask();
+  });
+}
+
+// --- iter-12: Connect-3 (text-version match-3, no animation) ---
+// Pure helpers exposed for tests. Letters A-E. A "match" is 3+ same in a row
+// horizontally or vertically. Resolving a match yields exp; cascades are
+// not modelled (kept simple and deterministic).
+const CONNECT3_LETTERS = ['A', 'B', 'C', 'D', 'E'];
+
+function connect3MakeBoard(rows = 5, cols = 5, rng = Math.random) {
+  const board = [];
+  for (let y = 0; y < rows; y++) {
+    const row = [];
+    for (let x = 0; x < cols; x++) {
+      // Avoid spawning an immediate triple at fill time.
+      let pick;
+      do {
+        pick = CONNECT3_LETTERS[Math.floor(rng() * CONNECT3_LETTERS.length)];
+      } while (
+        (x >= 2 && row[x - 1] === pick && row[x - 2] === pick) ||
+        (y >= 2 && board[y - 1][x] === pick && board[y - 2][x] === pick)
+      );
+      row.push(pick);
+    }
+    board.push(row);
+  }
+  return board;
+}
+
+function connect3FindMatches(board) {
+  const rows = board.length;
+  const cols = rows ? board[0].length : 0;
+  const hits = new Set();
+  // horizontal
+  for (let y = 0; y < rows; y++) {
+    let run = 1;
+    for (let x = 1; x <= cols; x++) {
+      if (x < cols && board[y][x] === board[y][x - 1] && board[y][x] !== null) run++;
+      else {
+        if (run >= 3) {
+          for (let k = 0; k < run; k++) hits.add((x - 1 - k) + ',' + y);
+        }
+        run = 1;
+      }
+    }
+  }
+  // vertical
+  for (let x = 0; x < cols; x++) {
+    let run = 1;
+    for (let y = 1; y <= rows; y++) {
+      if (y < rows && board[y][x] === board[y - 1][x] && board[y][x] !== null) run++;
+      else {
+        if (run >= 3) {
+          for (let k = 0; k < run; k++) hits.add(x + ',' + (y - 1 - k));
+        }
+        run = 1;
+      }
+    }
+  }
+  return hits;
+}
+
+function connect3Swap(board, ax, ay, bx, by) {
+  // Adjacent-only swap that must produce at least one match, otherwise reverts.
+  const rows = board.length;
+  const cols = board[0].length;
+  if (ax < 0 || ay < 0 || bx < 0 || by < 0 || ax >= cols || bx >= cols || ay >= rows || by >= rows) return { board, swapped: false };
+  const dx = Math.abs(ax - bx);
+  const dy = Math.abs(ay - by);
+  if (dx + dy !== 1) return { board, swapped: false };
+  const next = board.map((r) => r.slice());
+  [next[ay][ax], next[by][bx]] = [next[by][bx], next[ay][ax]];
+  const matches = connect3FindMatches(next);
+  if (matches.size === 0) return { board, swapped: false };
+  return { board: next, swapped: true, matches };
+}
+
+function connect3Resolve(board, matches) {
+  // Replace matched cells with null, then collapse columns down (gravity).
+  // Empty cells at the top stay null (no refill — kept deterministic).
+  const rows = board.length;
+  const cols = board[0].length;
+  const next = board.map((r) => r.slice());
+  for (const k of matches) {
+    const [x, y] = k.split(',').map(Number);
+    next[y][x] = null;
+  }
+  for (let x = 0; x < cols; x++) {
+    let writeY = rows - 1;
+    for (let y = rows - 1; y >= 0; y--) {
+      if (next[y][x] !== null) {
+        next[writeY][x] = next[y][x];
+        if (writeY !== y) next[y][x] = null;
+        writeY--;
+      }
+    }
+  }
+  return next;
+}
+
+async function connect3(game, opts = {}) {
+  const rows = opts.rows || 5;
+  const cols = opts.cols || 5;
+  let board = connect3MakeBoard(rows, cols);
+  const target = opts.target || 30;
+  const maxMoves = opts.maxMoves || 12;
+  let score = 0;
+  let moves = 0;
+
+  console.clear();
+  console.log(colors.bold('Connect-3 (text)'));
+  console.log(colors.dim('Swap two adjacent letters to form 3+ in a row.'));
+  console.log(colors.dim(`Reach ${target} pts in ${maxMoves} swaps. type x,y x,y (1-indexed) or q.`));
+  console.log();
+
+  const render = () => {
+    let head = '   ';
+    for (let x = 0; x < cols; x++) head += (x + 1) + ' ';
+    const lines = [head];
+    for (let y = 0; y < rows; y++) {
+      let line = ' ' + (y + 1) + ' ';
+      for (let x = 0; x < cols; x++) {
+        line += (board[y][x] || '.') + ' ';
+      }
+      lines.push(line);
+    }
+    return lines.join('\n');
+  };
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (r) => { if (done) return; done = true; rl.close(); resolve(r); };
+    const ask = () => {
+      if (done) return;
+      console.log(render());
+      console.log(colors.dim(`  score: ${score}/${target}  moves: ${moves}/${maxMoves}`));
+      if (score >= target) {
+        const exp = 60 + (maxMoves - moves) * 5;
+        console.log(colors.success('connect-3 cleared!'));
+        console.log(colors.gold(`+${exp} EXP`));
+        if (game && game.addExp) game.addExp(exp, 'connect3').catch(() => {});
+        if (game && game.gameState) game.gameState.connect3Cleared = true;
+        finish({ completed: true, win: true, score });
+        return;
+      }
+      if (moves >= maxMoves) {
+        console.log(colors.error('out of moves'));
+        finish({ completed: true, win: false, score });
+        return;
+      }
+      rl.question(colors.bold('swap (e.g. 1,1 2,1): '), (input) => {
+        if (done) return;
+        const s = (input || '').trim().toLowerCase();
+        if (s === 'q' || s === 'quit') { finish({ completed: false, win: false, score }); return; }
+        const m = s.match(/^(\d+)\s*,\s*(\d+)\s+(\d+)\s*,\s*(\d+)$/);
+        if (!m) {
+          console.log(colors.error('format: x,y x,y (1-indexed)'));
+          ask();
+          return;
+        }
+        const ax = parseInt(m[1], 10) - 1;
+        const ay = parseInt(m[2], 10) - 1;
+        const bx = parseInt(m[3], 10) - 1;
+        const by = parseInt(m[4], 10) - 1;
+        const res = connect3Swap(board, ax, ay, bx, by);
+        if (!res.swapped) {
+          console.log(colors.warning('no match formed - swap reverted'));
+          ask();
+          return;
+        }
+        moves++;
+        score += res.matches.size * 5;
+        board = connect3Resolve(res.board, res.matches);
+        ask();
+      });
+    };
+    rl.on('close', () => finish({ completed: false, win: false, score }));
+    ask();
+  });
+}
+
 module.exports = {
   snake, guess, matrix, pong, wordle, scoreGuess,
   qte, logicPuzzle, morse,
@@ -969,5 +1429,9 @@ module.exports = {
   // v2.4 additions
   chessPuzzle, cipherDecoder,
   CHESS_PUZZLES, isChessMateSolution,
-  caesarEncode, caesarDecode, scoreCipherGuess, CIPHER_DICT
+  caesarEncode, caesarDecode, scoreCipherGuess, CIPHER_DICT,
+  // v2.6 (iter-12) additions
+  sokobax, parseSokobaxLevel, sokobaxStep, sokobaxIsSolved, sokobaxRender, SOKOBAX_LEVELS,
+  slidingPuzzle, slidingMakeSolved, slidingShuffle, slidingMove, slidingIsSolved, slidingNeighbors,
+  connect3, connect3MakeBoard, connect3FindMatches, connect3Swap, connect3Resolve, CONNECT3_LETTERS
 };
