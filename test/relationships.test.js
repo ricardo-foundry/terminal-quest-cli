@@ -92,3 +92,54 @@ test('GIFT_TABLE has at least 5 entries with sane shape', () => {
     assert.equal(typeof e.ack, 'string');
   }
 });
+
+// ---- iter-13: edge cases ----
+
+test('giveGift: missing arguments fail gracefully', () => {
+  assert.equal(rel.giveGift(null, 'guide', 'rare-stamp').ok, false);
+  assert.equal(rel.giveGift({}, '', 'rare-stamp').ok, false);
+  assert.equal(rel.giveGift({}, 'guide', '').ok, false);
+});
+
+test('giveGift: log is capped to 50 entries even after many gifts', () => {
+  const gs = {};
+  for (let i = 0; i < 80; i++) {
+    rel.giveGift(gs, 'guide', 'rare-stamp');
+  }
+  assert.ok(Array.isArray(gs.giftLog));
+  assert.ok(gs.giftLog.length <= 50, `log grew to ${gs.giftLog.length}`);
+});
+
+test('moodFor: exact boundary values land in the expected bucket', () => {
+  const gs = {};
+  rel.adjustAffinity(gs, 'a', 60);
+  assert.equal(rel.moodFor(gs, 'a'), 'adoring');
+  rel.adjustAffinity(gs, 'a', -1);
+  assert.equal(rel.moodFor(gs, 'a'), 'friendly');
+  rel.adjustAffinity(gs, 'b', 19);
+  assert.equal(rel.moodFor(gs, 'b'), 'neutral');
+  rel.adjustAffinity(gs, 'b', 1);
+  assert.equal(rel.moodFor(gs, 'b'), 'friendly');
+  rel.adjustAffinity(gs, 'c', -60);
+  assert.equal(rel.moodFor(gs, 'c'), 'hostile');
+});
+
+test('specialItem: mood drops below adoring before granting -> returns null', () => {
+  const gs = {};
+  rel.adjustAffinity(gs, 'guide', 50);
+  // friendly, not adoring -> no item
+  assert.equal(rel.specialItem(gs, 'guide'), null);
+  rel.adjustAffinity(gs, 'guide', 30); // now 80 -> adoring
+  const got = rel.specialItem(gs, 'guide');
+  assert.ok(typeof got === 'string');
+});
+
+test('adjustAffinity: non-number deltas are coerced (NaN -> +0)', () => {
+  const gs = {};
+  rel.adjustAffinity(gs, 'guide', 'not-a-number');
+  assert.equal(rel.getAffinity(gs, 'guide'), 0);
+  rel.adjustAffinity(gs, 'guide', NaN);
+  assert.equal(rel.getAffinity(gs, 'guide'), 0);
+  rel.adjustAffinity(gs, 'guide', 7);
+  assert.equal(rel.getAffinity(gs, 'guide'), 7);
+});

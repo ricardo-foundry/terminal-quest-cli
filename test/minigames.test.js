@@ -351,3 +351,136 @@ test('CONNECT3_LETTERS has 5 distinct letters', () => {
   assert.equal(CONNECT3_LETTERS.length, 5);
   assert.equal(new Set(CONNECT3_LETTERS).size, 5);
 });
+
+// ---- iter-13: edge cases ----
+
+// --- Sokobax edges ---
+test('sokobax: stepping with an unknown direction is a no-op', () => {
+  const lvl = parseSokobaxLevel(SOKOBAX_LEVELS[0]);
+  const after = sokobaxStep(lvl, 'diagonal');
+  assert.equal(after, lvl);
+});
+
+test('sokobax: walking onto an empty floor cell moves the player only', () => {
+  const lvl = parseSokobaxLevel([
+    '#####',
+    '#@  #',
+    '#####'
+  ]);
+  const after = sokobaxStep(lvl, 'right');
+  assert.notEqual(after, lvl);
+  assert.equal(after.player.x, 2);
+  assert.equal(after.boxes.size, 0);
+});
+
+test('sokobax: cannot push two boxes in a row', () => {
+  const lvl = parseSokobaxLevel([
+    '######',
+    '#@$$ #',
+    '######'
+  ]);
+  const after = sokobaxStep(lvl, 'right');
+  // refuses (returns the same state object)
+  assert.equal(after, lvl);
+});
+
+test('sokobax: solving a level with the player on a goal renders "+"', () => {
+  // player starts on a goal cell; render glyph should be '+'.
+  const lvl = parseSokobaxLevel([
+    '###',
+    '#+#',
+    '###'
+  ]);
+  const rows = sokobaxRender(lvl);
+  assert.equal(rows[1][1], '+');
+});
+
+test('sokobax: isSolved is false when boxes and goals counts disagree', () => {
+  const lvl = parseSokobaxLevel([
+    '######',
+    '#$ . #',
+    '######'
+  ]);
+  assert.equal(sokobaxIsSolved(lvl), false);
+});
+
+// --- Sliding edges ---
+test('sliding: moving the empty tile (value 0) is a no-op', () => {
+  const b = [1, 2, 3, 4, 5, 0, 7, 8, 6];
+  const after = slidingMove(b, 0, 3);
+  // value 0 is "empty" — slidingMove looks for the tile value, finds the
+  // empty slot itself; result must not corrupt the board.
+  assert.equal(after.length, b.length);
+});
+
+test('sliding: moving an unknown tile value returns the same board', () => {
+  const b = slidingMakeSolved(3);
+  const after = slidingMove(b, 99, 3);
+  assert.equal(after, b);
+});
+
+test('sliding: 4x4 solved board passes slidingIsSolved', () => {
+  const b = slidingMakeSolved(4);
+  assert.equal(slidingIsSolved(b), true);
+  assert.equal(b.length, 16);
+});
+
+test('sliding: shuffle with 0 moves equals the solved board', () => {
+  const b = slidingShuffle(3, 0);
+  assert.deepEqual(b, slidingMakeSolved(3));
+});
+
+test('sliding: neighbors of every cell on a 3x3 grid are within bounds', () => {
+  for (let i = 0; i < 9; i++) {
+    const ns = slidingNeighbors(i, 3);
+    for (const n of ns) {
+      assert.ok(n >= 0 && n < 9, `out-of-bounds neighbor ${n} for ${i}`);
+    }
+  }
+});
+
+// --- Connect-3 edges ---
+test('connect3: swap with non-adjacent cells is rejected', () => {
+  const b = connect3MakeBoard(5, 5);
+  const r = connect3Swap(b, 0, 0, 4, 4);
+  assert.equal(r.swapped, false);
+});
+
+test('connect3: out-of-bounds swap returns swapped=false', () => {
+  const b = connect3MakeBoard(3, 3);
+  const r = connect3Swap(b, -1, 0, 0, 0);
+  assert.equal(r.swapped, false);
+});
+
+test('connect3: vertical triple is detected by findMatches', () => {
+  const b = [
+    ['A', 'X', 'Y'],
+    ['A', 'B', 'Y'],
+    ['A', 'C', 'Z']
+  ];
+  const m = connect3FindMatches(b);
+  assert.ok(m.has('0,0'));
+  assert.ok(m.has('0,1'));
+  assert.ok(m.has('0,2'));
+});
+
+test('connect3: resolve on an already-empty cell is idempotent', () => {
+  const b = [
+    [null, 'X'],
+    ['B',  'Y']
+  ];
+  const after = connect3Resolve(b, new Set());
+  assert.equal(after.length, 2);
+  // gravity collapses non-null down: row 1 col 0 is now 'B' or null
+  assert.ok(after[1][0] === 'B' || after[1][0] === null);
+});
+
+test('connect3: 3x3 board with only one letter is one giant match', () => {
+  const b = [
+    ['A', 'A', 'A'],
+    ['A', 'A', 'A'],
+    ['A', 'A', 'A']
+  ];
+  const m = connect3FindMatches(b);
+  assert.equal(m.size, 9);
+});

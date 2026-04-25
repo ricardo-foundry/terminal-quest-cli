@@ -133,9 +133,10 @@ worth the 30 seconds:
 
 | | | |
 |---|---|---|
-| 🏆 **34 achievements** in 6 categories | 🌐 **Bilingual UI** (en / zh) | 🎨 **3 themes** (dark / light / retro) |
-| 💾 **Multi-slot saves** with schema migration | 🗣️ **NPC mood branches** (kind / neutral / hostile) | 🎮 **8 minigames** with EXP rewards |
-| 🌅 **Day / night cycle** + phase-gated areas | 📇 **Shareable ASCII score cards** | 🪟 **Runs on macOS / Linux / Windows** |
+| 🏆 **34 achievements** in 6 categories | 🌐 **Trilingual UI** (en / zh / ja) | 🎨 **3 themes** (dark / light / retro) |
+| 💾 **Multi-slot saves** with schema migration | 🗣️ **NPC affinity + gifts** (5-mood ladder, per-NPC) | 🎮 **11 minigames** (snake, wordle, logic, morse, sokobax, sliding, connect-3, …) |
+| 🌅 **Day / night + 4 seasons** (30 turns each, gates content) | 📇 **Shareable ASCII score cards** | 🪟 **Runs on macOS / Linux / Windows** |
+| 📜 **Community quest format** (8 packs ship by default) | 🔖 **Bookmarks + `goto`** for fast travel | 🎁 **Gift system** that raises affinity and unlocks lore |
 
 Plus: shell-style `alias` / `unalias` / `history` / `!!`, tab-completion
 helper, in-game `tree` / `find` / `grep`, hidden easter-egg commands,
@@ -177,9 +178,10 @@ the cheat sheet:
 | Navigation | `ls`, `ls -a`, `cd <dir>`, `pwd`, `tree`, `map`                          |
 | Inspect    | `cat <file>`, `scan`, `find <name>`, `grep <text>`, `analyze`            |
 | Progress   | `status`, `inventory`, `quests`, `achievements`, `share`                 |
-| Interact   | `talk <npc> [choice]`, `use <item>`, `decode <file>`, `unlock master`    |
-| Play       | `run snake / guess / matrix / pong / wordle / qte / logic / morse`        |
-| Time       | `wait [n]`, `sleep`, `time`, `look`                                       |
+| Interact   | `talk <npc> [choice]`, `gift <item> to <npc>`, `use <item>`, `decode <file>`, `unlock master` |
+| Play       | `run snake / guess / matrix / pong / wordle / qte / logic / morse / sokobax / sliding / connect3` |
+| Time       | `wait [n]`, `sleep`, `season`, `time`, `look`                             |
+| Travel     | `bookmark <name>`, `bookmarks`, `goto <name>`                             |
 | Shell      | `alias name=val`, `unalias`, `history`, `!!`, `!<n>`, `complete <prefix>` |
 | Meta       | `save [slot]`, `load <slot>`, `saves`, `lang en\|zh\|ja`, `theme dark\|light\|retro`, `help`, `exit` (also accepts `:` prefix, e.g. `:save`) |
 | Fun        | `matrix`, `love`, `coffee`, `42`, `hello`, `sudo`, `easteregg`            |
@@ -265,6 +267,9 @@ themes are just an object of `chalk` color names / hex values.
 - [ ] Publish 1st-class `tq` completions for bash / zsh / fish
 - [ ] Mod API for third-party quests and zones
 - [x] Japanese language pack (shipped in v2.5)
+- [x] Seasons + NPC affinity + gift loop (shipped in v2.6)
+- [x] Sokobax / Sliding / Connect-3 minigames (shipped in v2.6)
+- [x] Bookmarks + `goto` fast travel (shipped in v2.6)
 - [ ] More language packs (fr, es, de, ko, pt-br)
 - [ ] Cloud-save adapter (optional, opt-in)
 

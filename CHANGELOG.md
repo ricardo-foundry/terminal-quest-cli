@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-04-25
+
+### Added (v2.6 content depth — Round 12 + Round 13)
+- **3 new minigames**: `sokobax` (push-the-box / sokoban),
+  `sliding` (15-puzzle), and `connect3` (text-mode match-3). All
+  three keep pure helpers exported so tests can drive moves and
+  check state without a TTY.
+- **3 new community quests**: `clockwork-vault` (mid-game heist),
+  `wandering-merchant` (season-gated trade quest), and
+  `silicon-shrine` (spring-only morse pilgrimage). Each is a
+  schema-version-1 quest that round-trips through
+  `--validate-quest`.
+- **NPC affinity / relationships** (`src/relationships.js`): every
+  NPC now has its own -100..+100 counter with a 5-mood ladder
+  (`adoring` / `friendly` / `neutral` / `cold` / `hostile`),
+  per-item gift table, talk-tick decay cap, special high-affinity
+  dialog, and a one-time special-item grant.
+- **Gift loop**: `gift <item> to <npc>` consumes an inventory
+  item, adjusts affinity per the gift table, may unlock a special
+  line, and can grant a bound special item the first time the NPC
+  reaches `adoring`. v2.6 (iter-13) also explicitly fires
+  `checkQuests` after a gift so quest progress updates immediately.
+- **Seasons** (`src/season.js`): a 4-season / 120-turn cycle layered
+  on top of the existing 24-turn day/night clock. Quests can
+  gate steps with `{ "type": "season", "season": "spring" }` or an
+  array of seasons. `npcAvailable` closes the shop in winter, the
+  merchant in winter, and the researcher in summer. The prompt
+  badge shows `🌸 Spring (12/30)`-style text.
+- **Bookmarks + fast travel**: `bookmark <name>` records the
+  current path, `bookmarks` lists them, `goto <name>` `cd`s back.
+  Names are validated to `[a-z0-9_-]{1,32}` so a hand-edited save
+  cannot inject control characters.
+- **Reward items in the world** (v2.6 / iter-13): `master-gear`,
+  `forbidden-lantern`, `wanderer-map`, `shrine-token`, and a new
+  `campfire` consumable can all be found by reading flagged files
+  in the world tree. Quest rewards still apply on top, so a
+  completionist can hold both copies.
+- **`campfire` item**: `use campfire` consumes the kit and skips
+  the rest of the current season in one turn — useful for
+  unblocking season-gated quests.
+- **`:dev wait-season` command** (--dev only): jumps the turn
+  counter to the next season boundary, prints the season
+  transition, and is no-op outside `--dev`.
+- **Generic file-pickup mechanism** in `cmdCat`: any file with a
+  `givesItem` string drops that item into the inventory the
+  first time it is read. Replaces the hard-coded
+  `abyss-gazer-eye` branch as the canonical pickup pattern.
+- **15+ new tests** (246 → 261+) across `minigames`, `season`, and
+  `relationships` covering edge cases (sokobax wall-blocking,
+  sliding shuffle solvability, connect-3 swap rejection, season
+  wrap, talk-tick cap, forbidden-gift drop, …).
+
+### Changed
+- `package.json` bumps to `2.6.0`. No new runtime dependencies.
+- `README.md` features table now lists 11 minigames, the gift /
+  affinity loop, seasons, and bookmark-based fast travel.
+  Commands cheat sheet adds `gift`, `season`, `bookmark`,
+  `bookmarks`, `goto`.
+- `bin/terminal-quest.js --validate-quest` continues to validate
+  every quest in `quests/`; CI verifies all 8 packs round-trip.
+
+### Fixed
+- `cmdGift` now explicitly calls `checkQuests` after granting an
+  affinity bump so a gift that satisfies a quest trigger updates
+  the quest log without waiting for the next command.
+
 ## [2.5.0] - 2026-04-25
 
 ### Added (v2.5 reflection + polish)

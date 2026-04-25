@@ -483,6 +483,37 @@ It remembers what you do.`,
                 content: '[unstable sample - reading it advances time rapidly]',
                 hidden: true,
                 executable: false
+              },
+              // v2.6 (iter-13): a master gear can be found in the lab too,
+              // not just as a quest reward. The quest rewards still apply on
+              // top, but completionists who skip the heist can still hold one.
+              'spare_gear.txt': {
+                type: 'file',
+                content: `A pristine brass gear sits in a glass case marked "SPARES".
+
+A note taped to the lid:
+  "Forged extra. The clockwork-vault one is the original; this one is
+   indistinguishable to anyone but the foreman. Take if you must."
+
+[obtained: master-gear]`,
+                hidden: true,
+                givesItem: 'master-gear'
+              },
+              // v2.6 (iter-13): a silicon-shrine token sits in a side alcove
+              // of the lab. Picking it up is the gentlest path into the
+              // silicon-shrine quest; the quest also grants one as a reward.
+              'shrine_alcove.txt': {
+                type: 'file',
+                content: `An alcove in the lab wall holds a single ceramic token.
+
+The token is engraved with three dots and a dash. Faintly humming.
+
+A small placard:
+  "For pilgrims of the Silicon Shrine. Carry it kindly."
+
+[obtained: shrine-token]`,
+                hidden: true,
+                givesItem: 'shrine-token'
               }
             }
           },
@@ -521,6 +552,22 @@ It remembers what you do.`,
 市场行情: 稳定
 建议: 先升级再购物`,
                 hidden: false
+              },
+              // v2.6 (iter-13): the wandering merchant leaves a small crate at
+              // the trade post in non-winter seasons. Reading the crate gives
+              // the wanderer-map (also a quest reward, but discoverable here).
+              'wanderer_crate.txt': {
+                type: 'file',
+                content: `A small wooden crate sits behind the shop counter.
+
+A handwritten label reads:
+  "Free to anyone heading toward /shadow/realm. Mind the cliffs."
+
+Inside: a folded leather map covered in pencil corrections.
+
+[obtained: wanderer-map]`,
+                hidden: true,
+                givesItem: 'wanderer-map'
               }
             }
           }
@@ -564,6 +611,23 @@ Most who reach this room want to burn the ledger.
 I hope you are not most.`,
                 executable: true,
                 npc: 'archivist'
+              },
+              // v2.6 (iter-13): the forbidden-lantern is normally a merchant
+              // quest reward, but a "loaner" copy hangs by the archive door
+              // for explorers who didn't trade. Reading the tag picks it up.
+              'lantern_tag.txt': {
+                type: 'file',
+                content: `An oil lantern hangs from a hook by the archive entrance.
+
+A wax-sealed tag dangles from the handle:
+  "On loan. Return it (or keep it; the merchant will not ask). Burns
+   for as long as you walk softly."
+
+You take the lantern. It is unexpectedly warm.
+
+[obtained: forbidden-lantern]`,
+                hidden: true,
+                givesItem: 'forbidden-lantern'
               }
             }
           },
@@ -855,6 +919,23 @@ I have been holding your ticket since before you bought it.
 Mind the gap, explorer. The gap is real.`,
             executable: true,
             npc: 'conductor'
+          },
+          // v2.6 (iter-13): a small fire kit by the platform. Reading the
+          // tag picks it up; `use campfire` then skips the season.
+          'campfire_kit.txt': {
+            type: 'file',
+            content: `A small canvas roll tucked under the bench by the platform.
+
+Inside:
+  - tinder, kindling, one waterproof match
+  - a tin cup with the conductor's initials scratched off
+  - a folded note: "for cold seasons. burns until the next one."
+
+You pocket the kit. Use it with: \`use campfire\`.
+
+[obtained: campfire]`,
+            hidden: true,
+            givesItem: 'campfire'
           },
           'lost_property': {
             type: 'dir',

@@ -37,7 +37,10 @@ const ITEM_META = {
   'torch':           { category: 'equipment',  effect: 'Lights up dark areas.' },
   'detector':        { category: 'equipment',  effect: 'Pings toward nearby fragments.' },
   'rare-stamp':      { category: 'collectible',effect: 'Limited-run archive stamp.' },
-  'morse-card':      { category: 'collectible',effect: 'Reference card from the lab.' }
+  'morse-card':      { category: 'collectible',effect: 'Reference card from the lab.' },
+  // v2.6 (iter-13): campfire — burns down the rest of the current season,
+  // catapulting the player into the next one. Single-use consumable.
+  'campfire':        { category: 'consumable', effect: 'Sleep through the rest of the season.' }
 };
 
 function classifyItem(name) {
@@ -93,7 +96,11 @@ const META_COMMANDS = new Set([
   'help', 'save', 'load', 'saves', 'theme', 'lang', 'version',
   'exit', 'quit', 'reboot', 'history', 'alias', 'unalias',
   'complete', 'replay', 'communityquests', 'community-quests',
-  'achievements', 'quests', 'status'
+  'achievements', 'quests', 'status',
+  // v2.6 (iter-13): :dev <sub> is the canonical form for developer-only
+  // sub-commands. Listing it here suppresses the soft "colon is for meta"
+  // warning so `:dev wait-season` runs cleanly.
+  'dev'
 ]);
 
 class CommandSystem {
@@ -258,7 +265,11 @@ class CommandSystem {
       goto: () => this.cmdGoto(args),
       season: () => this.cmdSeason(),
       affinity: () => this.cmdAffinity(args),
-      '?': () => this.cmdCheatSheet()
+      '?': () => this.cmdCheatSheet(),
+      // v2.6 (iter-13) developer-only sub-commands. Gated inside cmdDev so
+      // production sessions print a friendly "dev mode only" message and
+      // refuse to mutate state.
+      dev: () => this.cmdDev(args)
     };
 
     // v2.4: record the command into the replay buffer if present
@@ -499,6 +510,18 @@ class CommandSystem {
         this.game.gameState.inventory.push('abyss-gazer-eye');
       }
       console.log(colors.purple('[obtained: abyss-gazer-eye]'));
+    }
+
+    // v2.6 (iter-13): generic file-driven item pickup. Any file with a
+    // `givesItem` field grants that item the first time it is read. This
+    // lets quest reward items also exist in the world as findable loot.
+    if (file.givesItem && typeof file.givesItem === 'string') {
+      if (!Array.isArray(this.game.gameState.inventory)) this.game.gameState.inventory = [];
+      const inv = this.game.gameState.inventory;
+      if (!inv.includes(file.givesItem)) {
+        inv.push(file.givesItem);
+        console.log(colors.gold(`[obtained: ${file.givesItem}]`));
+      }
     }
   }
 
@@ -771,6 +794,19 @@ Location: /home/user/.secret/
     if (itemName === 'abyss-gazer-eye') {
       console.log(colors.purple('vision sharpened - hidden items now visible'));
       this.game.gameState.scanMode = true;
+    } else if (itemName === 'campfire') {
+      // v2.6 (iter-13): skip the rest of the current season in one turn.
+      const before = Number(this.game.gameState.turn) || 0;
+      const beforeSeason = seasonMod.getSeason(before);
+      const dayInto = seasonMod.dayOfSeason(before);
+      const turnsLeft = (seasonMod.SEASON_LENGTH - dayInto) + 1;
+      this.game.advanceTime(turnsLeft);
+      const after = Number(this.game.gameState.turn) || 0;
+      const afterSeason = seasonMod.getSeason(after);
+      const idx = inv.indexOf(itemName);
+      if (idx >= 0) inv.splice(idx, 1);
+      console.log(colors.gold(`you light the campfire and let it burn down through the season.`));
+      console.log(colors.dim(`  ${beforeSeason.icon} ${beforeSeason.label}  ->  ${afterSeason.icon} ${afterSeason.label}  (+${turnsLeft} turns)`));
     } else if (meta.category === 'consumable') {
       const idx = inv.indexOf(itemName);
       if (idx >= 0) inv.splice(idx, 1);
@@ -1555,6 +1591,47 @@ Thank you for exploring.
     console.log();
   }
 
+  // v2.6 (iter-13): developer-only sub-commands. Only active when the game
+  // was started with --dev. The first arg is the sub-command name. We keep
+  // this surface deliberately small so the player-visible CLI stays clean.
+  cmdDev(args) {
+    if (!this.game.options || !this.game.options.dev) {
+      console.log(colors.error('dev: this command is only available in --dev mode'));
+      console.log(colors.dim('  start the game with: terminal-quest --dev'));
+      return;
+    }
+    const sub = (args[0] || '').toLowerCase();
+    if (!sub) {
+      console.log(colors.bold('dev sub-commands'));
+      console.log('  :dev wait-season    advance time to the next season boundary');
+      console.log('  :dev help           show this list');
+      return;
+    }
+    if (sub === 'help') {
+      console.log(colors.bold('dev sub-commands'));
+      console.log('  :dev wait-season    advance time to the next season boundary');
+      return;
+    }
+    if (sub === 'wait-season') {
+      const before = Number(this.game.gameState.turn) || 0;
+      const beforeSeason = seasonMod.getSeason(before);
+      const dayInto = seasonMod.dayOfSeason(before);
+      // turns left in current season (dayOfSeason is 1-based)
+      const turnsLeft = (seasonMod.SEASON_LENGTH - dayInto) + 1;
+      this.game.advanceTime(turnsLeft);
+      const after = Number(this.game.gameState.turn) || 0;
+      const afterSeason = seasonMod.getSeason(after);
+      console.log();
+      console.log(colors.success(`[dev] advanced ${turnsLeft} turn(s)`));
+      console.log(`  ${beforeSeason.icon} ${beforeSeason.label}  ->  ${afterSeason.icon} ${afterSeason.label}`);
+      console.log(colors.dim(`  turn: ${before} -> ${after}`));
+      console.log();
+      return;
+    }
+    console.log(colors.error(`dev: unknown sub-command "${sub}"`));
+    console.log(colors.dim('  try: :dev help'));
+  }
+
   async cmdGift(args) {
     // syntax: gift <item> to <npc>     OR     gift <item> <npc>
     if (args.length < 2) {
@@ -1614,6 +1691,14 @@ Thank you for exploring.
     }
     console.log();
     await this.game.evaluateAutoAchievements();
+    // v2.6 (iter-13): a gift can satisfy quest triggers (affinity / hasItem
+    // changes). The dispatcher already calls checkQuests after every command,
+    // but we also call it explicitly here as a belt-and-braces measure so
+    // the quest log updates immediately even if a future caller bypasses
+    // the central dispatch.
+    if (typeof this.game.checkQuests === 'function') {
+      this.game.checkQuests();
+    }
   }
 
   cmdAffinity(args) {

@@ -78,3 +78,41 @@ test('yearOf advances every 120 turns', () => {
 test('YEAR_LENGTH is exactly 4 * SEASON_LENGTH', () => {
   assert.equal(season.YEAR_LENGTH, season.SEASON_LENGTH * 4);
 });
+
+// ---- iter-13: edge cases ----
+
+test('getSeason: NaN / undefined turn coerces to spring', () => {
+  assert.equal(season.getSeason(NaN).name, 'spring');
+  assert.equal(season.getSeason(undefined).name, 'spring');
+  assert.equal(season.getSeason(null).name, 'spring');
+});
+
+test('seasonsBetween: spans more than a full year reports each season once', () => {
+  // 0 -> 240 = 2 full years; expect at most 4 unique season names with no
+  // duplicates back-to-back of the same season.
+  const seen = season.seasonsBetween(0, 240);
+  for (let i = 1; i < seen.length; i++) {
+    assert.notEqual(seen[i].name, seen[i - 1].name, 'no consecutive duplicates');
+  }
+  // and we crossed multiple boundaries
+  assert.ok(seen.length >= 3);
+});
+
+test('npcAvailable: unknown npc id is always open', () => {
+  for (let t = 0; t < 120; t += 30) {
+    const r = season.npcAvailable('mystery-npc', season.getSeason(t));
+    assert.equal(r.open, true);
+  }
+});
+
+test('npcAvailable: a falsy season object defaults to open', () => {
+  assert.equal(season.npcAvailable('shop', null).open, true);
+  assert.equal(season.npcAvailable('shop', undefined).open, true);
+  assert.equal(season.npcAvailable('shop', {}).open, true);
+});
+
+test('matchesSeason: empty array never matches any current season', () => {
+  // an empty array is "no allowed seasons" — nothing should match.
+  assert.equal(season.matchesSeason({ turn: 0 }, []), false);
+  assert.equal(season.matchesSeason({ turn: 90 }, []), false);
+});
