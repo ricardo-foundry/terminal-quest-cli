@@ -181,7 +181,7 @@ the cheat sheet:
 | Play       | `run snake / guess / matrix / pong / wordle / qte / logic / morse`        |
 | Time       | `wait [n]`, `sleep`, `time`, `look`                                       |
 | Shell      | `alias name=val`, `unalias`, `history`, `!!`, `!<n>`, `complete <prefix>` |
-| Meta       | `save [slot]`, `load <slot>`, `saves`, `lang en\|zh`, `theme dark\|light\|retro`, `help`, `exit` |
+| Meta       | `save [slot]`, `load <slot>`, `saves`, `lang en\|zh\|ja`, `theme dark\|light\|retro`, `help`, `exit` (also accepts `:` prefix, e.g. `:save`) |
 | Fun        | `matrix`, `love`, `coffee`, `42`, `hello`, `sudo`, `easteregg`            |
 
 ### CLI flags
@@ -189,12 +189,15 @@ the cheat sheet:
 | Flag                | Description                                          | Example                                |
 | ------------------- | ---------------------------------------------------- | -------------------------------------- |
 | `--slot <name>`     | Load or create a named save slot on startup.         | `terminal-quest --slot alice`          |
-| `--lang <en\|zh>`   | Force a UI language.                                 | `terminal-quest --lang en`             |
+| `--lang <en\|zh\|ja>` | Force a UI language.                               | `terminal-quest --lang ja`             |
 | `--theme <name>`    | Pick a theme: `dark`, `light`, `retro`.              | `terminal-quest --theme retro`         |
 | `--no-boot`         | Skip the BIOS animation.                             | `terminal-quest --no-boot`             |
 | `--dev`             | Enable verbose dev logging.                          | `terminal-quest --dev`                 |
 | `--version`         | Print the package version and exit.                  | `terminal-quest --version`             |
 | `--help`            | Show CLI help.                                       | `terminal-quest --help`                |
+| `--list-quests`     | List every quest in `./quests/*/quest.json`.         | `terminal-quest --list-quests`         |
+| `--validate-quest <path>` | Validate one quest file and exit.              | `terminal-quest --validate-quest quests/starter-lab/quest.json` |
+| `--validate-quest=new --interactive` | Step-by-step quest builder; writes a schema-valid `quest.json` to stdout (or to a path). | `terminal-quest --validate-quest=new --interactive > q.json` |
 
 ---
 
@@ -232,13 +235,16 @@ so upgrading never nukes progress.
 
 ## i18n
 
-| Code | Language |
-| ---- | -------- |
-| `en` | English  |
-| `zh` | 中文     |
+| Code | Language | Coverage |
+| ---- | -------- | -------- |
+| `en` | English  | 100 %    |
+| `zh` | 中文     | 100 %    |
+| `ja` | 日本語   | 100 %    |
 
-Switch with `lang en` / `lang zh` in-game or `--lang` on startup. New
-language packs only need to implement the keys in `src/i18n.js`.
+Switch with `lang en` / `lang zh` / `lang ja` in-game or `--lang` on
+startup. New language packs only need to implement the keys in
+`src/i18n.js` — see [`docs/I18N_COVERAGE.md`](./docs/I18N_COVERAGE.md)
+for the contributor checklist.
 
 ## Themes
 
@@ -258,14 +264,21 @@ themes are just an object of `chalk` color names / hex values.
 - [ ] Record `docs/demo.cast` and embed it at the top of this README
 - [ ] Publish 1st-class `tq` completions for bash / zsh / fish
 - [ ] Mod API for third-party quests and zones
-- [ ] More language packs (ja, fr, es)
+- [x] Japanese language pack (shipped in v2.5)
+- [ ] More language packs (fr, es, de, ko, pt-br)
 - [ ] Cloud-save adapter (optional, opt-in)
 
 ## Contributing
 
-Issues, PRs and new quest ideas are warmly welcome. Please read
-[`CONTRIBUTING.md`](./CONTRIBUTING.md) first; this project follows the
-[Contributor Covenant](./CODE_OF_CONDUCT.md).
+Issues, PRs and new quest ideas are warmly welcome. **Brand-new
+contributors:** start with the
+[5-minute quickstart](./docs/CONTRIBUTING_QUICKSTART.md) — it walks
+you from a fresh clone to a merged PR in five steps and points you at
+the new interactive quest builder
+(`--validate-quest=new --interactive`).
+
+For deeper context, read [`CONTRIBUTING.md`](./CONTRIBUTING.md);
+this project follows the [Contributor Covenant](./CODE_OF_CONDUCT.md).
 
 For security issues, please see [`SECURITY.md`](./SECURITY.md) and do
 **not** open a public GitHub issue.

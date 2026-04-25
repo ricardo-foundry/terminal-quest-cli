@@ -79,8 +79,10 @@ class TerminalGame {
   constructor(options = {}) {
     this.options = options;
     this.slot = options.slot || saveMod.DEFAULT_SLOT;
-    this.commandSystem = new CommandSystem(this);
+    // v2.5 (iter-10): load state FIRST so the CommandSystem can seed its
+    // in-memory history from gameState.commandHistory at construction.
     this.gameState = this.loadGameState();
+    this.commandSystem = new CommandSystem(this);
     this.currentPath = this.gameState.currentPath || '/home/user';
     this.achievements = JSON.parse(JSON.stringify({ ...ACHIEVEMENTS, ...EXTRA_ACHIEVEMENTS }));
     // re-attach check functions (they do not survive JSON round-trip)
@@ -520,11 +522,33 @@ class TerminalGame {
 
   // -------- Input loop (simple, no conflicting raw mode) --------
   startInputLoop() {
+    // v2.5 (iter-10): completer wires our existing completionsFor() helper
+    // into readline. When the user hits <tab> we return matches for the
+    // current word — known commands, aliases, and visible objects in cwd.
+    const completer = (line) => {
+      try {
+        const colon = line.startsWith(':') ? ':' : '';
+        const trimmed = colon ? line.slice(1) : line;
+        // only complete the last word
+        const tokens = trimmed.split(/\s+/);
+        const last = tokens[tokens.length - 1] || '';
+        const hits = this.commandSystem.completionsFor(last.toLowerCase());
+        return [hits.map((h) => colon + (tokens.length === 1 ? h : tokens.slice(0, -1).join(' ') + ' ' + h)), line];
+      } catch (_) {
+        return [[], line];
+      }
+    };
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
       prompt: this.prompt + ' ',
-      historySize: 200
+      historySize: 200,
+      completer,
+      // v2.5 (iter-10): seed up-arrow history from the persisted slot.
+      // readline expects most-recent-first, while we save oldest-first.
+      history: (Array.isArray(this.gameState.commandHistory)
+        ? this.gameState.commandHistory.slice(-50).reverse()
+        : [])
     });
     this.rl = rl;
     rl.setPrompt(this.prompt + ' ');

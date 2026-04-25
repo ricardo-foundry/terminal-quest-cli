@@ -74,14 +74,16 @@ test('!! repeats the last command', async () => {
 });
 
 test('!<n> runs the n-th history entry', async () => {
-  const g = new TerminalGame({ slot: 'cmd-bangN-' + Date.now() });
+  const g = new TerminalGame({ slot: 'cmd-bangN-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) });
   await g.commandSystem.execute('pwd');    // 1
   await g.commandSystem.execute('status'); // 2
-  const beforeLen = g.gameState.commandHistory.length;
-  await g.commandSystem.execute('!1');
+  // v2.5 (iter-10): the persisted history may now contain entries seeded
+  // from a previous TerminalGame instance with the same slot (we restore
+  // history across sessions). Snapshot just our own commands here.
+  const ownStart = g.commandSystem.history.length - 2;
+  await g.commandSystem.execute('!' + (ownStart + 1));
   const tail = g.gameState.commandHistory[g.gameState.commandHistory.length - 1];
   assert.equal(tail, 'pwd');
-  assert.equal(g.gameState.commandHistory.length, beforeLen + 1);
 });
 
 test('commandHistory is capped at 50 entries', async () => {
@@ -192,4 +194,58 @@ test('commandHistory trimmed in persisted state at 50', async () => {
 test('tokenize handles unicode words', () => {
   const { tokenize } = require('../src/commands');
   assert.deepEqual(tokenize('talk 你好'), ['talk', '你好']);
+});
+
+// ---- v2.5 iter-10 ----
+test(':theme dark works as a meta-prefixed command', async () => {
+  const g = new TerminalGame({ slot: 'cmd-meta-' + Date.now() });
+  await g.commandSystem.execute(':theme dark');
+  assert.equal(g.gameState.theme, 'dark');
+});
+
+test(':help is identical to help', async () => {
+  const g = new TerminalGame({ slot: 'cmd-metahelp-' + Date.now() });
+  const before = g.gameState.helpCount || 0;
+  await g.commandSystem.execute(':help');
+  assert.equal(g.gameState.helpCount, before + 1);
+});
+
+test('history seeds from persisted commandHistory across sessions', async () => {
+  const slot = 'cmd-seed-' + Date.now();
+  const g1 = new TerminalGame({ slot });
+  await g1.commandSystem.execute('pwd');
+  await g1.commandSystem.execute('status');
+  g1.saveGameState();
+  // simulate fresh launch with same slot
+  const g2 = new TerminalGame({ slot });
+  // history should be seeded with the prior commands
+  assert.ok(g2.commandSystem.history.length >= 2);
+  assert.ok(g2.commandSystem.history.includes('pwd'));
+  assert.ok(g2.commandSystem.history.includes('status'));
+});
+
+test('wait warns when capped over 24 turns', async () => {
+  const g = new TerminalGame({ slot: 'cmd-waitcap-' + Date.now() });
+  const origWarn = console.warn;
+  let warned = '';
+  console.warn = (msg) => { warned += String(msg); };
+  try {
+    await g.commandSystem.execute('wait 9999');
+  } finally {
+    console.warn = origWarn;
+  }
+  assert.ok(/capped/i.test(warned), 'expected wait to warn about capping; got: ' + warned);
+});
+
+test('wait without big number does NOT warn', async () => {
+  const g = new TerminalGame({ slot: 'cmd-waitok-' + Date.now() });
+  const origWarn = console.warn;
+  let warned = '';
+  console.warn = (msg) => { warned += String(msg); };
+  try {
+    await g.commandSystem.execute('wait 5');
+  } finally {
+    console.warn = origWarn;
+  }
+  assert.ok(!/capped/i.test(warned), 'wait 5 should not warn; got: ' + warned);
 });

@@ -195,6 +195,97 @@ const DICTS = {
     'levelup.title': '等级提升',
     'levelup.now': 'Lv.{from} → Lv.{to}',
     'levelup.gained': '称号: {title}'
+  },
+
+  // Japanese — community-contributed example translation. Covers the
+  // ~80 most player-visible keys; missing keys fall back to English
+  // automatically (see t() below). Adding a translation here is the
+  // canonical "good first PR" — see docs/I18N_COVERAGE.md.
+  ja: {
+    'cmd.unknown': 'コマンドが見つかりません: {cmd}',
+    'cmd.hint': '"help" と入力すると使えるコマンドの一覧が出ます',
+    'cmd.usage': '使い方: {usage}',
+    'ok': 'OK',
+    'done': '完了',
+
+    'boot.ready': 'システム起動完了。',
+    'welcome.loaded': 'コアモジュールを読み込みました',
+    'welcome.banner': 'おかえりなさい、探索者!',
+    'welcome.level': '現在のレベル: Lv.{level}',
+    'welcome.achievements': '実績: {n} 件',
+    'welcome.status': '"status" で詳細を表示',
+    'welcome.new': '"help" と入力して冒険を始めよう',
+    'welcome.tutorial': '"cat start_here.txt" でチュートリアルを読む',
+
+    'ls.empty': '  (空のディレクトリ)',
+    'ls.total': '  合計: {dirs} ディレクトリ, {files} ファイル',
+    'ls.noent': "ls: '{path}' にアクセスできません: そのファイルやディレクトリはありません",
+    'cd.noent': "cd: そのファイルやディレクトリはありません: {path}",
+    'cd.notdir': "cd: ディレクトリではありません: {path}",
+    'cd.locked.level': 'レベル不足です! {area} は Lv.{need} 必要です (現在 Lv.{have})',
+    'cd.hint.levelup': 'ヒント: ミニゲームをするかクエストを進めるとレベルが上がります',
+    'cat.usage': '使い方: cat <ファイル>',
+    'cat.noent': "cat: {file}: そのファイルやディレクトリはありません",
+    'cat.isdir': "cat: {file}: ディレクトリです",
+    'cat.encrypted': 'ファイルは暗号化されています。decode {file} を使ってください',
+
+    'scan.running': 'システムをスキャン中...',
+    'scan.done': 'スキャンモードを有効にしました',
+    'scan.hidden': 'このディレクトリに隠しアイテムが {n} 件あります',
+    'decode.usage': '使い方: decode <ファイル>',
+    'decode.noent': 'decode: {file}: 見つかりません',
+    'decode.notenc': 'decode: このファイルは復号する必要がありません',
+    'decode.running': '復号中...',
+
+    'key.got': '鍵の断片を取得: {frag}',
+    'key.all': 'すべての鍵の断片を集めました! マスターキー: {key}',
+    'key.unlock.hint': '"unlock master" を入力して鍵を使う',
+    'key.incomplete': 'マスターキーが不完全です ({have}/3)',
+
+    'status.title': 'キャラクター ステータス',
+    'status.level': 'レベル',
+    'status.exp': '経験値',
+    'status.progress': '進捗',
+    'status.next': '次のレベルまで {n} EXP',
+    'status.maxed': '最大レベルに到達',
+    'status.dirs': '訪問したディレクトリ',
+    'status.files': '読んだファイル',
+    'status.games': 'プレイしたゲーム',
+    'status.achievements': '実績',
+    'status.quests': 'クエスト',
+    'inv.title': '所持品',
+    'inv.empty': '  (なし)',
+    'use.usage': '使い方: use <アイテム>',
+    'use.missing': '所持していません: {item}',
+    'quests.title': 'クエスト',
+    'quests.progress': '進捗: {done}/{total}',
+    'ach.title': '実績',
+    'ach.progress': '進捗: {done}/{total}',
+
+    'save.ok': 'スロット "{slot}" にセーブしました',
+    'save.fail': 'セーブに失敗しました: {err}',
+    'save.usage': '使い方: save [スロット名]',
+    'load.ok': 'スロット "{slot}" を読み込みました',
+    'load.fail': 'スロット "{slot}" の読み込みに失敗: {err}',
+    'load.usage': '使い方: load <スロット名>',
+    'saves.title': 'セーブスロット',
+    'saves.empty': '  (まだセーブはありません)',
+    'theme.usage': '使い方: theme <dark|light|retro>',
+    'theme.set': 'テーマを {name} に設定しました',
+    'theme.unknown': '不明なテーマ: {name}',
+    'lang.usage': '使い方: lang <en|zh|ja>',
+    'lang.set': '言語を {name} に切り替えました',
+    'lang.unknown': '不明な言語: {name}',
+
+    'exit.confirm': '終了する前にセーブしますか? [Y/n] ',
+    'exit.bye': 'さようなら、探索者。',
+    'exit.saved': '進捗を保存しました。',
+
+    'ach.unlocked': '実績解除!',
+    'ach.reward': '報酬: {reward}',
+    'levelup.title': 'レベル アップ',
+    'levelup.now': 'Lv.{from} → Lv.{to}',
+    'levelup.gained': '称号: {title}'
   }
 };
 
@@ -209,6 +300,7 @@ function detectLocale() {
     '';
   const lower = raw.toLowerCase();
   if (lower.startsWith('zh')) return 'zh';
+  if (lower.startsWith('ja')) return 'ja';
   return 'en';
 }
 

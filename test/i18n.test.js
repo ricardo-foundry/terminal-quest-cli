@@ -31,3 +31,43 @@ test('t falls back to the key when missing in both locales', () => {
   setLocale('en');
   assert.equal(t('no.such.key'), 'no.such.key');
 });
+
+// ---- v2.5 iter-10: Japanese locale ----
+test('availableLocales now includes ja', () => {
+  assert.ok(availableLocales().includes('ja'));
+});
+
+test('setLocale + t: japanese basics', () => {
+  setLocale('ja');
+  assert.equal(t('cmd.unknown', { cmd: 'foo' }), 'コマンドが見つかりません: foo');
+  assert.equal(t('boot.ready'), 'システム起動完了。');
+  setLocale('en');
+});
+
+test('ja covers every en key (no silent fallback)', () => {
+  const { DICTS } = require('../src/i18n');
+  const en = Object.keys(DICTS.en);
+  const missing = en.filter((k) => !(k in DICTS.ja));
+  assert.equal(missing.length, 0, 'ja missing keys: ' + missing.join(', '));
+});
+
+test('zh still covers every en key', () => {
+  const { DICTS } = require('../src/i18n');
+  const en = Object.keys(DICTS.en);
+  const missing = en.filter((k) => !(k in DICTS.zh));
+  assert.equal(missing.length, 0, 'zh missing keys: ' + missing.join(', '));
+});
+
+test('detectLocale honours LANG=ja_JP', () => {
+  const { detectLocale } = require('../src/i18n');
+  const orig = process.env.LANG;
+  const origTQ = process.env.TERMINAL_QUEST_LANG;
+  delete process.env.TERMINAL_QUEST_LANG;
+  process.env.LANG = 'ja_JP.UTF-8';
+  try {
+    assert.equal(detectLocale(), 'ja');
+  } finally {
+    if (orig === undefined) delete process.env.LANG; else process.env.LANG = orig;
+    if (origTQ !== undefined) process.env.TERMINAL_QUEST_LANG = origTQ;
+  }
+});

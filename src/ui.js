@@ -246,21 +246,24 @@ async function bootSequence({ skip = false } = {}) {
     return;
   }
   console.clear();
+  // Use locale-neutral, technical tokens so the boot stream does not
+  // need to be re-flowed when the player runs `lang en|zh|ja` mid-session.
+  // The expressive logo + welcome lines live below and ARE locale-aware.
   const biosLines = [
-    'BIOS v2.1 - KIMI-OS',
-    'CPU: Neural Core',
-    'Memory check...',
-    'Loading kernel modules...',
-    'Initializing AI core...',
-    'Mounting virtual file system...',
-    'System ready.'
+    'BIOS v2.1 -- KIMI-OS',
+    'CPU :: Neural Core',
+    'MEM :: check',
+    'KERN :: load modules',
+    'AI  :: init core',
+    'FS  :: mount virtual',
+    'SYS :: ready'
   ];
   for (const line of biosLines) {
-    if (line.startsWith('Memory')) {
-      await animations.progressBar(400, 8, 'Memory');
+    if (line.startsWith('MEM')) {
+      await animations.progressBar(400, 8, 'MEM');
       console.log(colors.success(`  [ok] ${line}`));
-    } else if (line.startsWith('Initializing')) {
-      await animations.spinner('Initializing AI core', 600);
+    } else if (line.startsWith('AI ')) {
+      await animations.spinner('AI :: init core', 600);
       console.log(colors.success(`  [ok] ${line}`));
     } else {
       console.log(colors.dim(`[${new Date().toLocaleTimeString()}] `) + colors.info(line));

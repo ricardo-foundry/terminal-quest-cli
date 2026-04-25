@@ -84,11 +84,26 @@ function tokenize(input) {
   return out;
 }
 
+// v2.5 (iter-10): meta commands are prefixed with ":" so they never collide
+// with in-world commands a quest author might add. The plain forms keep
+// working too — the colon is just an explicit "this is a CLI thing" hint.
+const META_COMMANDS = new Set([
+  'help', 'save', 'load', 'saves', 'theme', 'lang', 'version',
+  'exit', 'quit', 'reboot', 'history', 'alias', 'unalias',
+  'complete', 'replay', 'communityquests', 'community-quests',
+  'achievements', 'quests', 'status'
+]);
+
 class CommandSystem {
   constructor(game) {
     this.game = game;
-    this.history = [];
-    this.historyIndex = -1;
+    // Seed in-memory history from the persisted commandHistory so up-arrow
+    // works across sessions (per save slot).
+    const persisted = (game && game.gameState && Array.isArray(game.gameState.commandHistory))
+      ? game.gameState.commandHistory.slice(-200)
+      : [];
+    this.history = persisted;
+    this.historyIndex = this.history.length;
   }
 
   async execute(input) {
@@ -103,6 +118,17 @@ class CommandSystem {
     if (input.length > 1000) {
       console.log(colors.warning(`input truncated to 1000 chars (was ${input.length})`));
       input = input.slice(0, 1000);
+    }
+
+    // v2.5 (iter-10): meta-command prefix. ":theme dark" is identical to
+    // "theme dark" but flags the intent so contributors writing community
+    // quests don't accidentally shadow these names. Unknown meta names are
+    // softly warned about (we still try to dispatch).
+    let metaPrefixed = false;
+    if (input.startsWith(':')) {
+      metaPrefixed = true;
+      input = input.slice(1).trimStart();
+      if (!input) return;
     }
 
     // history substitution: !! and !<n>
@@ -228,6 +254,12 @@ class CommandSystem {
     // v2.4: record the command into the replay buffer if present
     if (this.game.replay && typeof this.game.replay.record === 'function') {
       this.game.replay.record('command', input);
+    }
+
+    if (metaPrefixed && !META_COMMANDS.has(cmd) && commands[cmd]) {
+      // Soft note: still run the command, but tell the user the colon is
+      // reserved for meta things so they can recalibrate next time.
+      console.log(colors.dim(`note: ":" is for meta commands; "${cmd}" runs as a regular command.`));
     }
 
     if (commands[cmd]) {
@@ -1290,7 +1322,16 @@ Thank you for exploring.
   }
 
   async cmdWait(args) {
-    const n = Math.max(1, Math.min(24, parseInt(args[0] || '1', 10) || 1));
+    const requested = parseInt(args[0] || '1', 10) || 1;
+    const n = Math.max(1, Math.min(24, requested));
+    if (requested > n) {
+      // v2.5 (iter-10): tell the player we capped them so a `wait 999999`
+      // does not look like the command silently no-op'd.
+      console.warn(colors.warning(
+        `wait: capped to ${n} turn(s) per call (asked for ${requested}). ` +
+        `run \`wait\` again to keep advancing time.`
+      ));
+    }
     const res = this.game.advanceTime(n);
     console.log(colors.dim(`time advances by ${n} turn(s) - now ${timeMod.formatClock(res.turn)} (${res.phase.name})`));
     for (const p of res.newPhases) {

@@ -36,6 +36,7 @@ function parseArgs(argv) {
     else if (a === '--list-quests') args.listQuests = true;
     else if (a === '--validate-quest') args.validateQuest = argv[++i];
     else if (a.startsWith('--validate-quest=')) args.validateQuest = a.slice(17);
+    else if (a === '--interactive' || a === '-i') args.interactive = true;
     else if (a === '--cloud') {
       // v2.5 (iter-9): mark the flag even when no op was supplied so we can
       // print a useful usage line instead of silently dropping into the
@@ -63,7 +64,7 @@ Options:
   -h, --help                 show this help
   -v, --version              print version
   --slot <name>              use a named save slot (default: "default")
-  --lang <code>              force language (en | zh)
+  --lang <code>              force language (en | zh | ja)
   --theme <name>             force theme (dark | light | retro)
   --no-boot                  skip the boot animation
   --no-color                 disable ANSI colour output
@@ -73,8 +74,12 @@ Options:
   --dev                      developer mode (hot-reloads community quests)
 
 Quests (v2.4):
-  --list-quests              list all quests loaded from ./quests/*/quest.json
-  --validate-quest <path>    validate a single quest.json file and exit
+  --list-quests                       list all quests in ./quests/*/quest.json
+  --validate-quest <path>             validate a single quest.json file
+  --validate-quest <path> --interactive
+                                      walk through prompts and write a new
+                                      quest.json template to <path>
+                                      (use "new" or "-" as <path> for stdout)
 
 Replay (v2.4):
   --replay <slot>            play back a recorded session from a save slot
@@ -165,6 +170,41 @@ function runValidateQuest(file) {
   console.error(`invalid  ${abs}`);
   for (const e of errors) console.error(`  ! ${e}`);
   process.exit(2);
+}
+
+async function runInteractiveQuest(targetFile) {
+  // --validate-quest <path> --interactive : walk the user through prompts
+  // and write a fresh quest.json template to <path>. If the path already
+  // exists we refuse to clobber.
+  const { buildQuestInteractive, readlineIO } = require('../src/quest-builder');
+  const io = readlineIO();
+  try {
+    const { quest, errors } = await buildQuestInteractive(io);
+    io.close();
+    const json = JSON.stringify(quest, null, 2);
+    if (errors.length > 0) {
+      console.error('quest builder produced a quest with validation errors:');
+      for (const e of errors) console.error(`  ! ${e}`);
+    }
+    if (targetFile && targetFile !== 'new' && targetFile !== '-') {
+      const abs = path.resolve(String(targetFile));
+      if (fs.existsSync(abs)) {
+        console.error(`refusing to overwrite existing file: ${abs}`);
+        console.error('  pass --validate-quest=new --interactive to print to stdout instead.');
+        process.exit(2);
+      }
+      fs.mkdirSync(path.dirname(abs), { recursive: true });
+      fs.writeFileSync(abs, json + '\n');
+      console.log(`wrote ${abs} (${json.length} bytes)`);
+    } else {
+      process.stdout.write(json + '\n');
+    }
+    process.exit(errors.length === 0 ? 0 : 2);
+  } catch (e) {
+    io.close();
+    console.error(`interactive builder failed: ${e && e.message ? e.message : e}`);
+    process.exit(2);
+  }
 }
 
 async function runCloud(op, slot) {
@@ -260,6 +300,10 @@ async function main() {
     return;
   }
   if (args.validateQuest) {
+    if (args.interactive) {
+      await runInteractiveQuest(args.validateQuest);
+      return;
+    }
     runValidateQuest(args.validateQuest);
     return;
   }

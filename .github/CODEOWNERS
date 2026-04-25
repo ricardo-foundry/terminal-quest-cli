@@ -1,0 +1,35 @@
+# CODEOWNERS — Terminal Quest CLI
+# Lines beginning with `#` are comments; the file follows GitHub's
+# standard CODEOWNERS syntax: <pattern> <owner1> <owner2>...
+#
+# The owner is auto-requested for review when a PR touches a matching
+# path. Owners can opt out per-PR; this is just the default routing.
+#
+# Replace `@ricardo-foundry` below with your own GitHub handle if you
+# fork the project.
+
+# Default fallback — every PR gets at least one reviewer.
+*                       @ricardo-foundry
+
+# Core engine
+/src/                   @ricardo-foundry
+/bin/                   @ricardo-foundry
+/test/                  @ricardo-foundry
+
+# World data — touch carefully, balance changes affect every player.
+/src/data.js            @ricardo-foundry
+
+# Save/load is the most fragile module — schema bumps need a migration.
+/src/save.js            @ricardo-foundry
+
+# Community quests live here. We DO NOT auto-request review for new
+# quest folders; they go through the lighter "/quests/**" path so
+# new contributors are not blocked on a single maintainer.
+/quests/                @ricardo-foundry
+
+# i18n: any new translation is welcome — keep an eye out for drift.
+/src/i18n.js            @ricardo-foundry
+
+# Docs — light-touch review, mostly for clarity.
+/docs/                  @ricardo-foundry
+*.md                    @ricardo-foundry
