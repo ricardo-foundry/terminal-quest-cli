@@ -26,6 +26,7 @@ const seasonMod = require('./season');
 const relMod = require('./relationships');
 const { groupByCategory } = require('./achievements');
 const leaderboardMod = require('./leaderboard');
+const { ngGreeting } = require('./ngplus');
 
 // Item classification table. Keys are item ids, values describe category & effect.
 const ITEM_META = {
@@ -874,7 +875,10 @@ Location: /home/user/.secret/
       : (npcMoodLabel === 'cold' || npcMoodLabel === 'hostile') ? 'hostile'
       : this.game.getNpcMood();
     const moodBlock = (npc.moods && npc.moods[mood]) || null;
-    const greetLine = (moodBlock && moodBlock.greeting) || npc.dialogs.greeting;
+    let greetLine = (moodBlock && moodBlock.greeting) || npc.dialogs.greeting;
+    // v2.9 (iter-19): NG+ greeting decorator — only takes effect when the
+    // current state is in NG+, so no behaviour change for fresh saves.
+    greetLine = ngGreeting(greetLine, this.game.gameState);
 
     console.log();
     const aff = relMod.getAffinity(this.game.gameState, npcName);

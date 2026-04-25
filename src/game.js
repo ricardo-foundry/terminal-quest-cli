@@ -26,6 +26,7 @@ const questsMod = require('./quests');
 const { ReplayRecorder } = require('./replay');
 const { t, setLocale, detectLocale } = require('./i18n');
 const { createTTS } = require('./tts');
+const ngplusMod = require('./ngplus');
 
 const DEFAULT_STATE = {
   currentPath: '/home/user',
@@ -97,7 +98,17 @@ const DEFAULT_STATE = {
   // v2.8 (iter-15): set true when the player runs `tutorial`. We never
   // reset it; future runs respect the flag to silence the "type cat
   // start_here.txt" hint.
-  tutorialSeen: false
+  tutorialSeen: false,
+  // v2.9 (iter-19) New Game+ fields. ngPlus flips true after the player
+  // re-launches with --ng on a save that finished the main story; ngCount
+  // is the number of completed cycles (1 on the first NG+ run). Cumulative
+  // counters are summed across cycles by buildNgPlusState().
+  ngPlus: false,
+  ngCount: 0,
+  ngAchievements: [],
+  unlockedQuestIds: [],
+  totalCommands: 0,
+  totalPlaytimeMs: 0
 };
 
 class TerminalGame {
@@ -364,7 +375,14 @@ class TerminalGame {
     console.log(colors.success(t('boot.ready')));
     console.log();
     const messages = [t('welcome.loaded')];
-    if (this.gameState.firstLaunch === false) {
+    if (this.gameState.ngPlus) {
+      // v2.9 (iter-19): NG+ banner — uses the same "Welcome back, traveler"
+      // line that NPC dialogue picks up. Includes cycle count for vanity.
+      const cycle = Number(this.gameState.ngCount || 1);
+      messages.push(colors.gold(`Welcome back, traveler... (NG+ cycle ${cycle})`));
+      messages.push(colors.info(t('welcome.achievements', { n: (this.gameState.achievements || []).length })));
+      messages.push(colors.dim(t('welcome.status')));
+    } else if (this.gameState.firstLaunch === false) {
       messages.push(colors.info(t('welcome.level', { level: this.gameState.level })));
       messages.push(colors.info(t('welcome.achievements', { n: (this.gameState.achievements || []).length })));
       messages.push(colors.dim(t('welcome.status')));
@@ -663,7 +681,32 @@ class TerminalGame {
       sigintTimer = setTimeout(() => { sigintCount = 0; }, 2000);
     });
 
+    // v2.9 (iter-19): idle / AFK timer. Soft prompt at 5 min, autosave at
+    // 10 min. Both run via setTimeout so they cost nothing while idle and
+    // don't block the REPL. We never auto-exit — the warning just nudges
+    // the user that their progress was saved.
+    this.idle = ngplusMod.createIdleTimer({
+      onSoft: () => {
+        try {
+          console.log();
+          console.log(colors.warning('[idle] Are you still there?'));
+          rl.prompt(true);
+        } catch (_) { /* ignore */ }
+      },
+      onHard: () => {
+        try {
+          this.saveGameState();
+          console.log();
+          console.log(colors.warning('[idle] 10 minutes of inactivity — auto-saved.'));
+          console.log(colors.dim('  type any command to continue.'));
+          rl.prompt(true);
+        } catch (_) { /* ignore */ }
+      }
+    });
+    this.idle.bump();
+
     rl.on('line', async (input) => {
+      this.idle.bump();
       try {
         await this.commandSystem.execute(input);
       } catch (e) {
@@ -681,6 +724,7 @@ class TerminalGame {
     rl.on('close', () => {
       console.log();
       console.log(colors.dim(t('exit.bye')));
+      try { this.idle && this.idle.stop(); } catch (_) { /* ignore */ }
       this.saveGameState();
       console.log(colors.info(t('exit.saved')));
       process.exit(0);

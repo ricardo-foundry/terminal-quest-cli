@@ -330,6 +330,69 @@ const EXTRA_ACHIEVEMENTS = {
         : 0;
       return (community + builtIn) >= 1 && !gs.historyOpened;
     }
+  },
+
+  // v2.9 (iter-19) New Game+ exclusives ----------------------------------
+  // All five only fire while the player is in an NG+ run (`ngPlus === true`).
+  // They form a small "encore" badge set rewarding loyalty without
+  // gating any content the first-pass player might want.
+  'recurring_soul': {
+    id: 'recurring_soul',
+    name: 'Recurring Soul',
+    icon: '♻️',
+    desc: 'Begin a New Game+ cycle',
+    reward: '300 EXP',
+    category: 'ngplus',
+    unlocked: false,
+    check: (gs) => !!gs.ngPlus
+  },
+
+  'echo_of_past': {
+    id: 'echo_of_past',
+    name: 'Echo of Past',
+    icon: '🪞',
+    desc: 'Revisit /world/nexus during NG+',
+    reward: '180 EXP',
+    category: 'ngplus',
+    unlocked: false,
+    check: (gs) => !!gs.ngPlus && (gs.visitedDirs || []).includes('/world/nexus')
+  },
+
+  'second_dawn': {
+    id: 'second_dawn',
+    name: 'Second Dawn',
+    icon: '🌄',
+    desc: 'Witness a dawn cycle in NG+',
+    reward: '180 EXP',
+    category: 'ngplus',
+    unlocked: false,
+    check: (gs) => !!gs.ngPlus && !!gs.dawnVisited
+  },
+
+  'ouroboros': {
+    id: 'ouroboros',
+    name: 'Ouroboros',
+    icon: '🐍',
+    desc: 'Reach the third NG+ cycle',
+    reward: '500 EXP',
+    category: 'ngplus',
+    unlocked: false,
+    check: (gs) => !!gs.ngPlus && Number(gs.ngCount || 0) >= 3
+  },
+
+  'mentor_to_self': {
+    id: 'mentor_to_self',
+    name: 'Mentor to Self',
+    icon: '🧓',
+    desc: 'Re-complete the unlock_master quest in NG+',
+    reward: '600 EXP',
+    category: 'ngplus',
+    unlocked: false,
+    check: (gs) => {
+      if (!gs.ngPlus) return false;
+      const qs = gs.questsState || {};
+      return !!(qs.unlock_master && qs.unlock_master.completed);
+    }
   }
 };
 

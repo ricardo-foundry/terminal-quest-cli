@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (iter-19 — New Game+ and idle detection, no version bump)
+- **New Game+ mode** (`src/ngplus.js`):
+  - Unlocked once the player finishes the main story (the
+    `unlock_master` quest, or any save with `masterUnlocked === true`,
+    or the legacy `unlock_master` achievement).
+  - Boot with `--ng` (alias `--new-game-plus`) to roll the slot into
+    a fresh playthrough that carries forward:
+    achievements, NPC affinities, talk counts, locales played,
+    cumulative `totalCommands` / `totalPlaytimeMs`, an incremented
+    `ngCount`, and the `communityQuestState` map (so finished
+    community arcs are tagged in `unlockedQuestIds`).
+  - World-progression fields (visited dirs, inventory, key fragments,
+    `masterUnlocked`, alignment) all reset.
+  - Old slot is archived to `<slot>.archived-<ts>` before NG+ writes.
+  - `ngGreeting()` decorates NPC dialogue with
+    `"Welcome back, traveler... "` while in NG+; cycle 2+ shows
+    `"Welcome back again, traveler... (cycle N). "`.
+  - Welcome banner (`game.js#showWelcome`) shows the NG+ cycle count
+    in gold once the run loads.
+- **5 New Game+ exclusive achievements** (`src/achievements.js`):
+  - `recurring_soul` (♻) — begin a NG+ cycle, +300 EXP.
+  - `echo_of_past` (🪞) — revisit `/world/nexus` in NG+, +180 EXP.
+  - `second_dawn` (🌄) — see a dawn cycle in NG+, +180 EXP.
+  - `ouroboros` (🐍) — reach the third NG+ cycle, +500 EXP.
+  - `mentor_to_self` (🧓) — re-finish the `unlock_master` quest in
+    NG+, +600 EXP. All five share the new `ngplus` category.
+- **Idle / AFK detection** (`createIdleTimer` in `src/ngplus.js`):
+  - Soft prompt at 5 minutes idle: `"[idle] Are you still there?"`
+    (does not exit the REPL, just nudges).
+  - Hard threshold at 10 minutes: autosave plus
+    `"[idle] 10 minutes of inactivity — auto-saved."` warning.
+    The game stays alive — typing any command resumes normally.
+  - The timer is tick-based (`now()` + `schedule()` shims) so tests
+    drive it deterministically without real `setTimeout` clocks.
+  - Wired into `game.js#startInputLoop`: every `rl.on('line')`
+    bumps the timer; `rl.on('close')` stops it.
+- **Tests** (`test/ngplus.test.js`, +10): hasUnlockedNgPlus across
+  three milestone shapes, full carry-over via `buildNgPlusState`,
+  `ngGreeting` toggle, idle timer with mocked clock (soft+hard,
+  bump-resets), idle once-per-bump invariant, all 5 NG+ achievements
+  registered with the `ngplus` category, NG+ rollover via the
+  actual `TerminalGame` class, cumulative totals across two cycles.
+
+### Changed (iter-19)
+- `bin/terminal-quest.js` parses `--ng` / `--new-game-plus`. Refuses
+  with a clear stderr if the slot hasn't completed the main story.
+- `src/game.js#DEFAULT_STATE` gains `ngPlus`, `ngCount`,
+  `ngAchievements`, `unlockedQuestIds`, `totalCommands`,
+  `totalPlaytimeMs`. All default to safe falsy values; old saves
+  pick them up via the spread merge in `loadGameState()`.
+- `src/commands.js#cmdTalk` runs the NPC greeting through
+  `ngGreeting(line, state)` so dialogue updates are uniform.
+- No new runtime dependencies. No version bump (still v2.8.0).
+  Test count rises from 338 to 348.
+
 ### Documentation (iter-17 — final consolidation, no version bump)
 - New `docs/JOURNEY.md` — end-to-end timeline of iter-1..iter-16
   with theme, headline outcome, and running test count per iter.

@@ -28,6 +28,8 @@ function parseArgs(argv) {
     // v2.8 (iter-15): opt-in text-to-speech for NPC lines. Default off.
     else if (a === '--tts') args.tts = true;
     else if (a === '--new') args.newSave = true;
+    // v2.9 (iter-19): start a New Game+ run on the current slot.
+    else if (a === '--ng' || a === '--new-game-plus') args.ngPlus = true;
     else if (a === '--export-save') args.exportSave = argv[++i];
     else if (a.startsWith('--export-save=')) args.exportSave = a.slice(14);
     else if (a === '--import-save') {
@@ -71,6 +73,9 @@ Options:
   --no-boot                  skip the boot animation
   --no-color                 disable ANSI colour output
   --new                      start with a fresh save (any existing slot is archived)
+  --ng                       start a New Game+ on the current slot (requires
+                             a finished playthrough; carries achievements,
+                             affinities, totals, and unlocked community quests)
   --export-save <slot>       print the slot's JSON to stdout and exit
   --import-save <file> <slot>  import JSON from <file> into <slot> and exit
   --dev                      developer mode (hot-reloads community quests)
@@ -273,6 +278,34 @@ async function runReplay(slot) {
   process.exit(0);
 }
 
+function startNewGamePlus(slot) {
+  // v2.9 (iter-19): roll the named slot into a fresh NG+ run. We need the
+  // previous payload before we archive so we can carry forward achievements
+  // and affinities. Returns true on success; false (with stderr) when the
+  // milestone hasn't been hit yet.
+  const saveMod = require('../src/save');
+  const ngplusMod = require('../src/ngplus');
+  const { DEFAULT_STATE } = require('../src/game');
+
+  const target = slot || saveMod.DEFAULT_SLOT;
+  const payload = saveMod.load(target);
+  if (!payload || !payload.state) {
+    console.error(`--ng: no save found in slot "${target}". Finish the story first.`);
+    process.exit(2);
+  }
+  if (!ngplusMod.hasUnlockedNgPlus(payload.state)) {
+    console.error(`--ng: slot "${target}" hasn't completed the main story yet.`);
+    console.error('  hint: finish the unlock_master quest before starting NG+.');
+    process.exit(2);
+  }
+  // Archive the old run so the player can recover it if NG+ disappoints.
+  archiveSlot(target);
+  const fresh = ngplusMod.buildNgPlusState(payload.state, { ...DEFAULT_STATE });
+  saveMod.save(target, fresh);
+  console.log(`NG+ ready on slot "${target}" — cycle ${fresh.ngCount}.`);
+  return true;
+}
+
 function archiveSlot(slot) {
   try {
     const saveMod = require('../src/save');
@@ -346,6 +379,8 @@ async function main() {
 
   // If --new, archive the existing slot so the game starts fresh.
   if (args.newSave) archiveSlot(args.slot);
+  // If --ng, roll the slot into a New Game+ payload before boot.
+  if (args.ngPlus) startNewGamePlus(args.slot);
 
   // Honour --lang / --theme before game instantiation
   if (args.lang) {
