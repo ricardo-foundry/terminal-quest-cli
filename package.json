@@ -1,7 +1,7 @@
 {
   "name": "terminal-quest-cli",
-  "version": "2.6.0",
-  "description": "Terminal Quest - a bilingual RPG adventure that lives entirely in your terminal (npx terminal-quest-cli).",
+  "version": "2.7.0",
+  "description": "Terminal Quest - a multilingual RPG adventure that lives entirely in your terminal (npx terminal-quest-cli). Now with local leaderboard, Markdown reports, zh-TW + Spanish locales.",
   "main": "src/game.js",
   "bin": {
     "terminal-quest": "./bin/terminal-quest.js",

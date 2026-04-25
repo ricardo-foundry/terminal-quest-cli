@@ -28,14 +28,26 @@ const colors = {};
  * Apply a theme palette in-place to the shared `colors` object.
  * Rebinds rainbow / gradient / neon helpers after swap.
  *
+ * v2.7 (iter-14): also sync chalk.level with the cached terminal
+ * capabilities so a `--no-color` flag honoured AFTER chalk loaded still
+ * suppresses ANSI escapes. Without this sync, the retro theme's
+ * `chalk.hex('#FFB000')` calls would still emit truecolor escapes when
+ * the player passed `--no-color`.
+ *
  * @param {string} [name='dark'] theme name
  */
 function applyTheme(name = 'dark') {
+  const caps = getCapabilities();
+  // chalk@4 caches `level` at module load. Re-sync it now so a late
+  // --no-color (which set NO_COLOR=1 then refreshed terminal caps) is
+  // honoured by every chalk-built palette function below.
+  if (typeof chalk.level === 'number') {
+    chalk.level = caps.colorLevel;
+  }
   const palette = getTheme(name);
   // reset existing keys
   for (const k of Object.keys(colors)) delete colors[k];
   Object.assign(colors, palette);
-  const caps = getCapabilities();
   colors.rainbow = caps.colorLevel === 0 ? (t) => t : rainbow;
   colors.gradient = (text) => colors.rainbow(text);
   colors.neon = caps.colorLevel === 0 ? (t) => t : (text) => chalk.bold.cyan(text);

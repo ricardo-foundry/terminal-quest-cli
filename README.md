@@ -133,10 +133,11 @@ worth the 30 seconds:
 
 | | | |
 |---|---|---|
-| 🏆 **34 achievements** in 6 categories | 🌐 **Trilingual UI** (en / zh / ja) | 🎨 **3 themes** (dark / light / retro) |
+| 🏆 **39 achievements** in 6 categories | 🌐 **5 languages** (en / zh / zh-tw / ja / es) | 🎨 **3 themes** (dark / light / retro) |
 | 💾 **Multi-slot saves** with schema migration | 🗣️ **NPC affinity + gifts** (5-mood ladder, per-NPC) | 🎮 **11 minigames** (snake, wordle, logic, morse, sokobax, sliding, connect-3, …) |
 | 🌅 **Day / night + 4 seasons** (30 turns each, gates content) | 📇 **Shareable ASCII score cards** | 🪟 **Runs on macOS / Linux / Windows** |
 | 📜 **Community quest format** (8 packs ship by default) | 🔖 **Bookmarks + `goto`** for fast travel | 🎁 **Gift system** that raises affinity and unlocks lore |
+| 🏁 **Local leaderboard** (`top` / `top export`) | 📝 **Markdown war-story reports** (`report`) | 🎁 **Polyglot / Night-Shift / Silent-Runner** new in v2.7 |
 
 Plus: shell-style `alias` / `unalias` / `history` / `!!`, tab-completion
 helper, in-game `tree` / `find` / `grep`, hidden easter-egg commands,
@@ -183,7 +184,8 @@ the cheat sheet:
 | Time       | `wait [n]`, `sleep`, `season`, `time`, `look`                             |
 | Travel     | `bookmark <name>`, `bookmarks`, `goto <name>`                             |
 | Shell      | `alias name=val`, `unalias`, `history`, `!!`, `!<n>`, `complete <prefix>` |
-| Meta       | `save [slot]`, `load <slot>`, `saves`, `lang en\|zh\|ja`, `theme dark\|light\|retro`, `help`, `exit` (also accepts `:` prefix, e.g. `:save`) |
+| Stats      | `top`, `top <n>`, `top export`, `top import <file>`, `report [slot]`      |
+| Meta       | `save [slot]`, `load <slot>`, `saves`, `lang en\|zh\|zh-tw\|ja\|es`, `theme dark\|light\|retro`, `help`, `exit` (also accepts `:` prefix, e.g. `:save`) |
 | Fun        | `matrix`, `love`, `coffee`, `42`, `hello`, `sudo`, `easteregg`            |
 
 ### CLI flags
@@ -191,7 +193,7 @@ the cheat sheet:
 | Flag                | Description                                          | Example                                |
 | ------------------- | ---------------------------------------------------- | -------------------------------------- |
 | `--slot <name>`     | Load or create a named save slot on startup.         | `terminal-quest --slot alice`          |
-| `--lang <en\|zh\|ja>` | Force a UI language.                               | `terminal-quest --lang ja`             |
+| `--lang <en\|zh\|zh-tw\|ja\|es>` | Force a UI language. Auto-detects from `LANG`. | `terminal-quest --lang es`             |
 | `--theme <name>`    | Pick a theme: `dark`, `light`, `retro`.              | `terminal-quest --theme retro`         |
 | `--no-boot`         | Skip the BIOS animation.                             | `terminal-quest --no-boot`             |
 | `--dev`             | Enable verbose dev logging.                          | `terminal-quest --dev`                 |
@@ -237,16 +239,21 @@ so upgrading never nukes progress.
 
 ## i18n
 
-| Code | Language | Coverage |
-| ---- | -------- | -------- |
-| `en` | English  | 100 %    |
-| `zh` | 中文     | 100 %    |
-| `ja` | 日本語   | 100 %    |
+| Code     | Language               | Coverage |
+| -------- | ---------------------- | -------- |
+| `en`    | English                | 100 %    |
+| `zh`    | 中文 (Simplified)       | 100 %    |
+| `zh-tw` | 中文 (Traditional)      | 100 %    |
+| `ja`    | 日本語                  | 100 %    |
+| `es`    | Español                 | 100 %    |
 
-Switch with `lang en` / `lang zh` / `lang ja` in-game or `--lang` on
-startup. New language packs only need to implement the keys in
-`src/i18n.js` — see [`docs/I18N_COVERAGE.md`](./docs/I18N_COVERAGE.md)
-for the contributor checklist.
+Switch with `lang en` / `lang zh` / `lang zh-tw` / `lang ja` / `lang es`
+in-game, or `--lang` on startup. The locale is also auto-detected from
+`LANG` / `LC_ALL` / `LC_MESSAGES` — `LANG=zh_TW.UTF-8` and
+`LANG=es_ES.UTF-8` will pick the right pack on launch. New language
+packs only need to implement the keys in `src/i18n.js` — see
+[`docs/I18N_COVERAGE.md`](./docs/I18N_COVERAGE.md) for the contributor
+checklist.
 
 ## Themes
 
@@ -270,6 +277,8 @@ themes are just an object of `chalk` color names / hex values.
 - [x] Seasons + NPC affinity + gift loop (shipped in v2.6)
 - [x] Sokobax / Sliding / Connect-3 minigames (shipped in v2.6)
 - [x] Bookmarks + `goto` fast travel (shipped in v2.6)
+- [x] Traditional Chinese + Spanish locales (shipped in v2.7)
+- [x] Local leaderboard + Markdown reports (shipped in v2.7)
 - [ ] More language packs (fr, es, de, ko, pt-br)
 - [ ] Cloud-save adapter (optional, opt-in)
 

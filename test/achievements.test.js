@@ -135,3 +135,68 @@ test('collector_v24 needs one item from each category', () => {
   });
   assert.ok(full.includes('collector_v24'));
 });
+
+// ---- v2.7 (iter-14): five new achievements ----
+test('v2.7 adds polyglot/night_shift/merchant_friend/completionist_quest/silent_runner', () => {
+  const ids = Object.keys(EXTRA_ACHIEVEMENTS);
+  assert.ok(ids.includes('polyglot'));
+  assert.ok(ids.includes('night_shift'));
+  assert.ok(ids.includes('merchant_friend'));
+  assert.ok(ids.includes('completionist_quest'));
+  assert.ok(ids.includes('silent_runner'));
+});
+
+test('polyglot fires at 4+ unique locales', () => {
+  const three = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, {
+    localesUsed: ['en', 'zh', 'ja']
+  });
+  assert.ok(!three.includes('polyglot'));
+  const four = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, {
+    localesUsed: ['en', 'zh', 'ja', 'es']
+  });
+  assert.ok(four.includes('polyglot'));
+});
+
+test('night_shift fires at 12 consecutive nights survived', () => {
+  const ten = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, { nightSurvivedStreak: 10 });
+  assert.ok(!ten.includes('night_shift'));
+  const twelve = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, { nightSurvivedStreak: 12 });
+  assert.ok(twelve.includes('night_shift'));
+});
+
+test('merchant_friend needs shop affinity >= 80', () => {
+  const low = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, { npcAffinity: { shop: 50 } });
+  assert.ok(!low.includes('merchant_friend'));
+  const high = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, { npcAffinity: { shop: 80 } });
+  assert.ok(high.includes('merchant_friend'));
+});
+
+test('completionist_quest needs 5 quests done (built-in + community combined)', () => {
+  const four = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, {
+    questsState: {
+      a: { completed: true }, b: { completed: true }, c: { completed: true }
+    },
+    questPackDone: 1
+  });
+  assert.ok(!four.includes('completionist_quest'));
+  const five = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, {
+    questsState: {
+      a: { completed: true }, b: { completed: true }, c: { completed: true }
+    },
+    questPackDone: 2
+  });
+  assert.ok(five.includes('completionist_quest'));
+});
+
+test('silent_runner needs a quest done AND historyOpened=false', () => {
+  const opened = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, {
+    questPackDone: 1,
+    historyOpened: true
+  });
+  assert.ok(!opened.includes('silent_runner'));
+  const quiet = evaluateAutoUnlocks(EXTRA_ACHIEVEMENTS, {
+    questPackDone: 1,
+    historyOpened: false
+  });
+  assert.ok(quiet.includes('silent_runner'));
+});

@@ -7,13 +7,32 @@
 
 ## Currently shipped locales
 
-| Code | Name      | Keys | Coverage | Notes                                          |
-| ---- | --------- | ---- | -------- | ---------------------------------------------- |
-| `en` | English   | 76   | 100 %    | Source of truth                                |
-| `zh` | 中文      | 76   | 100 %    | Hand-translated                                |
-| `ja` | 日本語    | 76   | 100 %    | v2.5 (iter-10) community-style example         |
+| Code     | Name              | Keys | Coverage | Notes                                          |
+| -------- | ----------------- | ---- | -------- | ---------------------------------------------- |
+| `en`    | English            | 76   | 100 %    | Source of truth                                |
+| `zh`    | 中文 (Simplified)  | 76   | 100 %    | Hand-translated                                |
+| `zh-tw` | 中文 (Traditional) | 76   | 100 %    | v2.7 — derived from `zh` with regional vocab   |
+| `ja`    | 日本語             | 76   | 100 %    | v2.5 (iter-10) community-style example         |
+| `es`    | Español            | 76   | 100 %    | v2.7 — full hand translation                   |
 
-(Counted by the test in `test/i18n.test.js` — see "ja covers all en keys".)
+(Counted by the tests in `test/i18n.test.js` — see "ja covers all en keys",
+"zh-tw covers every en key", "es covers every en key".)
+
+## Auto-detection
+
+`detectLocale()` consults `TERMINAL_QUEST_LANG` first, then `LC_ALL`,
+`LC_MESSAGES`, `LANG`. The mapping is:
+
+| Env value (case-insensitive)           | Selected locale |
+| -------------------------------------- | --------------- |
+| `zh_TW.*`, `zh_HK.*`, `zh-Hant*`        | `zh-tw`         |
+| any other `zh*`                         | `zh`            |
+| `ja*`                                   | `ja`            |
+| `es*`                                   | `es`            |
+| anything else                           | `en`            |
+
+The Traditional Chinese branch is checked **before** the generic `zh*` so
+a Taiwanese player on `LANG=zh_TW.UTF-8` does not get Simplified output.
 
 ## Verifying coverage locally
 

@@ -136,17 +136,21 @@ const THEMES = {
     orange: chalk.hex('#D2691E')
   },
   retro: {
+    // v2.7 (iter-14): give success / gold a distinct shade from primary so
+    // [OK] lines don't disappear into the run-of-the-mill amber. Previously
+    // success and primary were both #FFB000 which made level-up popups and
+    // achievement banners look identical to ordinary text in retro mode.
     primary: chalk.hex('#FFB000'),
     secondary: chalk.hex('#FFA000'),
     accent: chalk.hex('#FFC040'),
     warning: chalk.hex('#FF8C00'),
     error: chalk.hex('#FF4000'),
-    success: chalk.hex('#FFB000'),
+    success: chalk.hex('#FFE060'),
     info: chalk.hex('#FFD080'),
     dim: chalk.hex('#8B6000'),
     white: chalk.hex('#FFDDAA'),
     bold: chalk.bold,
-    gold: chalk.hex('#FFB000'),
+    gold: chalk.hex('#FFE060'),
     purple: chalk.hex('#FFC040'),
     orange: chalk.hex('#FF8C00')
   }

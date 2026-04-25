@@ -25,6 +25,7 @@ const timeMod = require('./time');
 const seasonMod = require('./season');
 const relMod = require('./relationships');
 const { groupByCategory } = require('./achievements');
+const leaderboardMod = require('./leaderboard');
 
 // Item classification table. Keys are item ids, values describe category & effect.
 const ITEM_META = {
@@ -269,7 +270,11 @@ class CommandSystem {
       // v2.6 (iter-13) developer-only sub-commands. Gated inside cmdDev so
       // production sessions print a friendly "dev mode only" message and
       // refuse to mutate state.
-      dev: () => this.cmdDev(args)
+      dev: () => this.cmdDev(args),
+      // v2.7 (iter-14) additions
+      top: () => this.cmdTop(args),
+      leaderboard: () => this.cmdTop(args),
+      report: () => this.cmdReport(args)
     };
 
     // v2.4: record the command into the replay buffer if present
@@ -1140,6 +1145,13 @@ Thank you for exploring.
       return;
     }
     this.game.gameState.locale = code;
+    // v2.7: track unique locales for the Polyglot achievement.
+    if (!Array.isArray(this.game.gameState.localesUsed)) {
+      this.game.gameState.localesUsed = [];
+    }
+    if (!this.game.gameState.localesUsed.includes(code)) {
+      this.game.gameState.localesUsed.push(code);
+    }
     console.log(colors.success(t('lang.set', { name: code })));
   }
 
@@ -1350,6 +1362,8 @@ Thank you for exploring.
   }
 
   cmdHistory() {
+    // v2.7: gate for the Silent Runner achievement. Once true, never resets.
+    this.game.gameState.historyOpened = true;
     const h = this.game.gameState.commandHistory || [];
     console.log();
     console.log(colors.bold('History (last 50)'));
@@ -1791,6 +1805,119 @@ Thank you for exploring.
     console.log(colors.dim(`-> ${target}`));
   }
 
+  // v2.7 (iter-14): leaderboard + Markdown report --------------------------
+  cmdTop(args) {
+    const sub = (args[0] || '').toLowerCase();
+    if (sub === 'export') {
+      const text = leaderboardMod.exportText();
+      console.log();
+      console.log(text);
+      console.log();
+      console.log(colors.dim('  tip: copy the block above to share. ' +
+        '`top import < file.txt` will read it back.'));
+      return;
+    }
+    if (sub === 'import') {
+      // read from stdin or from `top import <path>`. We default to a
+      // heredoc-style: the player runs `top import` and the next read line
+      // is the data. To keep the REPL simple we instead require a path arg.
+      const filePath = args[1];
+      if (!filePath) {
+        console.log(colors.error('Usage: top import <file>'));
+        return;
+      }
+      try {
+        const fs = require('fs');
+        const body = fs.readFileSync(filePath, 'utf8');
+        const r = leaderboardMod.importText(body);
+        console.log(`imported ${r.imported} entr${r.imported === 1 ? 'y' : 'ies'}, ` +
+          `skipped ${r.skipped}.`);
+        if (r.errors.length) {
+          for (const e of r.errors) console.log(colors.dim('  ! ' + e));
+        }
+      } catch (e) {
+        console.log(colors.error(`top import: cannot read ${filePath}: ${e.message}`));
+      }
+      return;
+    }
+    const n = parseInt(args[0], 10);
+    const limit = Number.isFinite(n) && n > 0 ? n : leaderboardMod.TOP_N_DEFAULT;
+    const entries = leaderboardMod.topN(limit);
+    console.log();
+    console.log(colors.bold(`Top ${limit} (local saves)`));
+    console.log(colors.dim('-'.repeat(70)));
+    if (entries.length === 0) {
+      console.log(colors.dim('  (no save slots yet — run `save` to create one)'));
+      console.log();
+      return;
+    }
+    console.log(colors.dim(
+      '  rank  slot              level  exp    ach  quests  playtime  score'));
+    entries.forEach((e, i) => {
+      const rank = String(i + 1).padStart(4);
+      const slot = String(e.slot).padEnd(16);
+      const lv = (`Lv.${e.level}`).padEnd(5);
+      const exp = String(e.exp).padEnd(6);
+      const ach = String(e.achievements).padEnd(3);
+      const q = String(e.totalQuests).padEnd(6);
+      const pt = leaderboardMod.fmtPlaytime(e.playtimeMs).padEnd(8);
+      const score = String(Math.round(e.score)).padStart(6);
+      const isMe = e.slot === this.game.slot;
+      const line = `  ${rank}  ${slot}  ${lv}  ${exp}  ${ach}  ${q}  ${pt}  ${score}`;
+      console.log(isMe ? colors.success(line) : line);
+    });
+    console.log();
+    console.log(colors.dim(
+      '  `top export` to share, `top <n>` to widen, `report` for a Markdown writeup.'));
+    console.log();
+  }
+
+  cmdReport(args) {
+    // generate a Markdown war-story report at:
+    //   ~/.terminal-quest/reports/<slot>-<ts>.md
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+    const slotName = (args[0] || this.game.slot || saveMod.DEFAULT_SLOT).trim();
+    const reportsDir = path.join(os.homedir(), '.terminal-quest', 'reports');
+    try {
+      fs.mkdirSync(reportsDir, { recursive: true });
+    } catch (e) {
+      console.log(colors.error(`report: cannot create ${reportsDir}: ${e.message}`));
+      return;
+    }
+    // Read the slot we want to report on. If it's the current slot we
+    // can use the live in-memory state for fully-fresh data; otherwise we
+    // load from disk.
+    let state, savedAt;
+    if (slotName === this.game.slot) {
+      state = this.game.gameState;
+      savedAt = Date.now();
+    } else {
+      const payload = saveMod.load(slotName);
+      if (!payload || !payload.state) {
+        console.log(colors.error(`report: no save found in slot "${slotName}"`));
+        return;
+      }
+      state = payload.state;
+      savedAt = payload.savedAt || Date.now();
+    }
+
+    const md = buildReportMarkdown(slotName, state, this.game, savedAt);
+    const ts = new Date(savedAt).toISOString().replace(/[:T]/g, '-').slice(0, 19);
+    const filename = `${slotName}-${ts}.md`.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const full = path.join(reportsDir, filename);
+    try {
+      fs.writeFileSync(full, md);
+      console.log();
+      console.log(colors.success(`report written: ${full}`));
+      console.log(colors.dim(`  ${md.length} bytes  -  Markdown, viewable in any editor.`));
+      console.log();
+    } catch (e) {
+      console.log(colors.error(`report: cannot write ${full}: ${e.message}`));
+    }
+  }
+
   historyUp() {
     if (this.historyIndex > 0) { this.historyIndex--; return this.history[this.historyIndex]; }
     return null;
@@ -1801,4 +1928,124 @@ Thank you for exploring.
   }
 }
 
-module.exports = { CommandSystem, tokenize };
+// v2.7 (iter-14) -----------------------------------------------------------
+// Plain-text Markdown report. Lives outside the class so the tests can
+// import it directly without spinning up a TerminalGame instance.
+function buildReportMarkdown(slot, state, game, savedAt) {
+  const lines = [];
+  const date = new Date(savedAt || Date.now()).toISOString().replace('T', ' ').slice(0, 19);
+  const playtimeSec = Math.max(
+    0,
+    Math.floor((Number(state.playtimeMs || 0) / 1000)),
+    Math.floor(((savedAt || Date.now()) - (state.startTime || savedAt || Date.now())) / 1000)
+  );
+  const h = Math.floor(playtimeSec / 3600);
+  const m = Math.floor((playtimeSec % 3600) / 60);
+  const playStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
+
+  lines.push(`# Terminal Quest report — slot \`${slot}\``);
+  lines.push('');
+  lines.push(`*generated ${date}*`);
+  lines.push('');
+  lines.push('## Snapshot');
+  lines.push('');
+  lines.push(`- **Level:** ${state.level || 1}`);
+  lines.push(`- **EXP:** ${state.exp || 0}`);
+  lines.push(`- **Playtime:** ${playStr}`);
+  lines.push(`- **Locale:** ${state.locale || 'en'}`);
+  lines.push(`- **Theme:** ${state.theme || 'dark'}`);
+  lines.push(`- **Alignment:** ${state.alignment || 0} (min seen: ${state.minAlignment || 0})`);
+  lines.push('');
+
+  // Achievements
+  const achList = Array.isArray(state.achievements) ? state.achievements : [];
+  lines.push(`## Achievements (${achList.length})`);
+  lines.push('');
+  if (achList.length === 0) {
+    lines.push('_No achievements unlocked yet._');
+  } else {
+    // Resolve names from the live game registry if available.
+    const reg = (game && game.achievements) || {};
+    for (const id of achList) {
+      const meta = reg[id];
+      if (meta) {
+        lines.push(`- ${meta.icon || '*'} **${meta.name}** — ${meta.desc}`);
+      } else {
+        lines.push(`- ${id}`);
+      }
+    }
+  }
+  lines.push('');
+
+  // Quests completed
+  lines.push('## Quests completed');
+  lines.push('');
+  const builtIn = state.questsState
+    ? Object.entries(state.questsState).filter(([, q]) => q && q.completed)
+    : [];
+  if (builtIn.length === 0) {
+    lines.push('_No built-in quests completed._');
+  } else {
+    for (const [id] of builtIn) lines.push(`- built-in: \`${id}\``);
+  }
+  const community = state.communityQuestState
+    ? Object.entries(state.communityQuestState).filter(([, q]) => q && q.done)
+    : [];
+  if (community.length > 0) {
+    for (const [id, q] of community) {
+      lines.push(`- community: \`${id}\`${q.branch ? ` (branch: ${q.branch})` : ''}`);
+    }
+  }
+  lines.push('');
+
+  // Footprint (visited dirs)
+  const dirs = Array.isArray(state.visitedDirs) ? state.visitedDirs : [];
+  lines.push(`## Footprint (${dirs.length} directories visited)`);
+  lines.push('');
+  if (dirs.length === 0) {
+    lines.push('_No directories visited._');
+  } else {
+    for (const d of dirs.slice(0, 25)) lines.push(`- \`${d}\``);
+    if (dirs.length > 25) lines.push(`- ...and ${dirs.length - 25} more`);
+  }
+  lines.push('');
+
+  // Favourite NPC (highest affinity)
+  const npcAff = state.npcAffinity || {};
+  const npcEntries = Object.entries(npcAff).sort((a, b) => Number(b[1]) - Number(a[1]));
+  lines.push('## Favourite NPC');
+  lines.push('');
+  if (npcEntries.length === 0) {
+    lines.push('_No NPC interactions recorded._');
+  } else {
+    const [topId, topVal] = npcEntries[0];
+    lines.push(`- **${topId}** — affinity ${topVal}`);
+    if (npcEntries.length > 1) {
+      lines.push('');
+      lines.push('Other relationships:');
+      for (const [id, v] of npcEntries.slice(1, 6)) {
+        lines.push(`- ${id}: ${v}`);
+      }
+    }
+  }
+  lines.push('');
+
+  // Inventory
+  const inv = Array.isArray(state.inventory) ? state.inventory : [];
+  lines.push(`## Inventory (${inv.length})`);
+  lines.push('');
+  if (inv.length === 0) {
+    lines.push('_Empty._');
+  } else {
+    for (const it of inv) lines.push(`- \`${it}\``);
+  }
+  lines.push('');
+
+  lines.push('---');
+  lines.push('');
+  lines.push('*Generated by `terminal-quest report` (v2.7).*');
+  lines.push('');
+  return lines.join('\n');
+}
+
+module.exports = { CommandSystem, tokenize, buildReportMarkdown };

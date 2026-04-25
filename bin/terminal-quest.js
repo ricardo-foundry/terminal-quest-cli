@@ -64,7 +64,7 @@ Options:
   -h, --help                 show this help
   -v, --version              print version
   --slot <name>              use a named save slot (default: "default")
-  --lang <code>              force language (en | zh | ja)
+  --lang <code>              force language (en | zh | zh-tw | ja | es)
   --theme <name>             force theme (dark | light | retro)
   --no-boot                  skip the boot animation
   --no-color                 disable ANSI colour output
@@ -96,7 +96,9 @@ Commands inside the game:
   load <slot>       load a save slot
   saves             list slots
   theme <name>      change theme (dark|light|retro)
-  lang <code>       change language (en|zh)
+  lang <code>       change language (en|zh|zh-tw|ja|es)
+  top [n]           show local leaderboard (default top 10)
+  report [slot]     write a Markdown war-story report to ~/.terminal-quest/reports/
   replay [slot]     replay recorded events from the current or named slot
   exit              quit
 `);
@@ -325,9 +327,14 @@ async function main() {
   }
 
   // Honour --no-color *before* anything touches chalk/terminal probing.
+  // v2.7 (iter-14): also re-apply the current theme so the live `colors`
+  // palette in ui.js (which was bound at require-time before NO_COLOR was
+  // set) gets rebuilt with the plain decorators. Without this the prompt
+  // would still emit ANSI even under --no-color.
   if (args.noColor) {
     process.env.NO_COLOR = '1';
     try { require('../src/terminal').refresh(); } catch (_) { /* ignore */ }
+    try { require('../src/ui').applyTheme('dark'); } catch (_) { /* ignore */ }
   }
 
   // If --new, archive the existing slot so the game starts fresh.

@@ -337,6 +337,218 @@ const DICTS = {
     'season.title':     '季節',
     'affinity.title':   'NPC の親密度',
     'cheatsheet.title': 'クイック リファレンス (?)'
+  },
+
+  // Traditional Chinese — derived from `zh` with regional word changes.
+  // Notable diffs from Simplified: 软件→軟件, 信息→資訊, 默认→預設,
+  // 启用→啟用, 检测→偵測, 删除→刪除, 数据→資料, 网络→網路, 程序→程式
+  // (kept the existing technical/loanword vocabulary where mainland and
+  //  Taiwan terminology agrees, e.g. 等級, 任務, 經驗).
+  'zh-tw': {
+    'cmd.unknown': '找不到指令: {cmd}',
+    'cmd.hint': '輸入 "help" 查看可用指令',
+    'cmd.usage': '用法: {usage}',
+    'ok': '完成',
+    'done': '完成',
+
+    'boot.ready': '系統就緒。',
+    'welcome.loaded': '核心模組已載入',
+    'welcome.banner': '歡迎回來，探索者！',
+    'welcome.level': '目前等級: Lv.{level}',
+    'welcome.achievements': '已獲得成就: {n} 個',
+    'welcome.status': '輸入 "status" 查看詳細狀態',
+    'welcome.new': '輸入 "help" 開始你的冒險',
+    'welcome.tutorial': '輸入 "cat start_here.txt" 閱讀新手指南',
+
+    'ls.empty': '  (空目錄)',
+    'ls.total': '  總計: {dirs} 目錄, {files} 檔案',
+    'ls.noent': "ls: 無法存取 '{path}': 沒有此檔案或目錄",
+    'cd.noent': "cd: 無法存取 '{path}': 沒有此檔案或目錄",
+    'cd.notdir': "cd: '{path}' 不是目錄",
+    'cd.locked.level': '等級不足！{area} 需要 Lv.{need}（目前 Lv.{have}）',
+    'cd.hint.levelup': '提示: 玩遊戲或完成任務可以提升等級',
+    'cat.usage': '用法: cat <檔名>',
+    'cat.noent': "cat: {file}: 沒有此檔案或目錄",
+    'cat.isdir': "cat: {file}: 是一個目錄",
+    'cat.encrypted': '檔案已加密，請使用: decode {file}',
+
+    'scan.running': '掃描系統中...',
+    'scan.done': '掃描模式已啟用',
+    'scan.hidden': '偵測到目前目錄存在 {n} 個隱藏項目',
+    'decode.usage': '用法: decode <檔名>',
+    'decode.noent': 'decode: {file}: 找不到檔案',
+    'decode.notenc': 'decode: 該檔案不需要解碼',
+    'decode.running': '解碼中...',
+
+    'key.got': '取得密鑰碎片: {frag}',
+    'key.all': '集齊所有密鑰碎片！主密鑰: {key}',
+    'key.unlock.hint': '輸入 "unlock master" 使用密鑰',
+    'key.incomplete': '密鑰不完整（{have}/3）',
+
+    'status.title': '角色狀態',
+    'status.level': '等級',
+    'status.exp': '經驗',
+    'status.progress': '進度',
+    'status.next': '還需 {n} EXP 才能升級',
+    'status.maxed': '已達到最高等級',
+    'status.dirs': '已造訪目錄',
+    'status.files': '已閱讀檔案',
+    'status.games': '遊戲次數',
+    'status.achievements': '成就',
+    'status.quests': '任務',
+    'inv.title': '背包',
+    'inv.empty': '  (空)',
+    'use.usage': '用法: use <物品名>',
+    'use.missing': '你沒有: {item}',
+    'quests.title': '任務列表',
+    'quests.progress': '進度: {done}/{total}',
+    'ach.title': '成就列表',
+    'ach.progress': '進度: {done}/{total}',
+
+    'save.ok': '遊戲已儲存到存檔 "{slot}"',
+    'save.fail': '儲存失敗: {err}',
+    'save.usage': '用法: save [存檔名]',
+    'load.ok': '已載入存檔 "{slot}"',
+    'load.fail': '無法載入存檔 "{slot}": {err}',
+    'load.usage': '用法: load <存檔名>',
+    'saves.title': '存檔列表',
+    'saves.empty': '  (尚無存檔)',
+    'theme.usage': '用法: theme <dark|light|retro>',
+    'theme.set': '主題已切換為 {name}',
+    'theme.unknown': '未知的主題: {name}',
+    'lang.usage': '用法: lang <en|zh|zh-tw|ja|es>',
+    'lang.set': '語言已切換為 {name}',
+    'lang.unknown': '未知的語言: {name}',
+
+    'exit.confirm': '離開前要儲存進度嗎？[Y/n] ',
+    'exit.bye': '再見，探索者。',
+    'exit.saved': '進度已儲存。',
+
+    'ach.unlocked': '成就解鎖!',
+    'ach.reward': '獎勵: {reward}',
+    'levelup.title': '等級提升',
+    'levelup.now': 'Lv.{from} → Lv.{to}',
+    'levelup.gained': '稱號: {title}',
+
+    'gift.usage':       '用法: gift <物品> to <NPC>',
+    'gift.no_item':     'gift: 你沒有 "{item}"',
+    'gift.no_npc':      'gift: 未知的 NPC "{npc}"',
+    'gift.npc_absent':  'gift: {name} 不在這裡',
+    'gift.received':    '[獲得: {item}]',
+    'bookmark.usage':   '用法: bookmark <名稱>',
+    'bookmark.bad':     'bookmark: 名稱需 1-32 個字元 [a-z0-9_-]',
+    'bookmark.set':     '已收藏 "{name}" -> {path}',
+    'bookmarks.empty':  '  (空) - 試試: bookmark home',
+    'goto.usage':       '用法: goto <書籤名稱>',
+    'goto.unknown':     'goto: 沒有書籤 "{name}"',
+    'goto.gone':        'goto: 書籤目標已消失: {path}',
+    'season.title':     '季節',
+    'affinity.title':   'NPC 好感度',
+    'cheatsheet.title': '快速參考 (?)'
+  },
+
+  // Spanish — full translation contributed in v2.7. Covers all 76 keys.
+  es: {
+    'cmd.unknown': 'Comando no encontrado: {cmd}',
+    'cmd.hint': 'Escribe "help" para ver los comandos disponibles',
+    'cmd.usage': 'Uso: {usage}',
+    'ok': 'OK',
+    'done': 'Listo',
+
+    'boot.ready': 'Sistema listo.',
+    'welcome.loaded': 'Módulos principales cargados',
+    'welcome.banner': '¡Bienvenido de nuevo, explorador!',
+    'welcome.level': 'Nivel actual: Lv.{level}',
+    'welcome.achievements': 'Logros: {n}',
+    'welcome.status': 'Escribe "status" para más detalles',
+    'welcome.new': 'Escribe "help" para iniciar tu aventura',
+    'welcome.tutorial': 'Escribe "cat start_here.txt" para el tutorial',
+
+    'ls.empty': '  (vacío)',
+    'ls.total': '  Total: {dirs} dirs, {files} archivos',
+    'ls.noent': "ls: no se puede acceder a '{path}': no existe el archivo o directorio",
+    'cd.noent': "cd: no existe el archivo o directorio: {path}",
+    'cd.notdir': "cd: no es un directorio: {path}",
+    'cd.locked.level': '¡Nivel insuficiente! {area} requiere Lv.{need} (tienes: Lv.{have})',
+    'cd.hint.levelup': 'Consejo: juega minijuegos o completa misiones para subir de nivel',
+    'cat.usage': 'Uso: cat <archivo>',
+    'cat.noent': "cat: {file}: no existe el archivo o directorio",
+    'cat.isdir': "cat: {file}: es un directorio",
+    'cat.encrypted': 'Archivo cifrado. Usa: decode {file}',
+
+    'scan.running': 'Escaneando el sistema...',
+    'scan.done': 'Modo escaneo activado',
+    'scan.hidden': 'Detectado(s) {n} elemento(s) oculto(s) en este directorio',
+    'decode.usage': 'Uso: decode <archivo>',
+    'decode.noent': 'decode: {file}: no encontrado',
+    'decode.notenc': 'decode: el archivo no necesita decodificación',
+    'decode.running': 'Descifrando...',
+
+    'key.got': 'Fragmento de llave obtenido: {frag}',
+    'key.all': '¡Todos los fragmentos recogidos! Llave maestra: {key}',
+    'key.unlock.hint': 'Escribe "unlock master" para usar la llave',
+    'key.incomplete': 'Llave maestra incompleta ({have}/3)',
+
+    'status.title': 'Estado del personaje',
+    'status.level': 'Nivel',
+    'status.exp': 'EXP',
+    'status.progress': 'Progreso',
+    'status.next': 'Faltan {n} EXP para el siguiente nivel',
+    'status.maxed': 'Nivel máximo alcanzado',
+    'status.dirs': 'Directorios visitados',
+    'status.files': 'Archivos leídos',
+    'status.games': 'Partidas jugadas',
+    'status.achievements': 'Logros',
+    'status.quests': 'Misiones',
+    'inv.title': 'Inventario',
+    'inv.empty': '  (vacío)',
+    'use.usage': 'Uso: use <objeto>',
+    'use.missing': 'No tienes: {item}',
+    'quests.title': 'Misiones',
+    'quests.progress': 'Progreso: {done}/{total}',
+    'ach.title': 'Logros',
+    'ach.progress': 'Progreso: {done}/{total}',
+
+    'save.ok': 'Partida guardada en el espacio "{slot}"',
+    'save.fail': 'No se pudo guardar la partida: {err}',
+    'save.usage': 'Uso: save [nombre-de-espacio]',
+    'load.ok': 'Espacio "{slot}" cargado',
+    'load.fail': 'No se pudo cargar el espacio "{slot}": {err}',
+    'load.usage': 'Uso: load <nombre-de-espacio>',
+    'saves.title': 'Espacios de guardado',
+    'saves.empty': '  (aún no hay partidas guardadas)',
+    'theme.usage': 'Uso: theme <dark|light|retro>',
+    'theme.set': 'Tema cambiado a {name}',
+    'theme.unknown': 'Tema desconocido: {name}',
+    'lang.usage': 'Uso: lang <en|zh|zh-tw|ja|es>',
+    'lang.set': 'Idioma cambiado a {name}',
+    'lang.unknown': 'Idioma desconocido: {name}',
+
+    'exit.confirm': '¿Guardar antes de salir? [Y/n] ',
+    'exit.bye': 'Adiós, explorador.',
+    'exit.saved': 'Progreso guardado.',
+
+    'ach.unlocked': '¡Logro desbloqueado!',
+    'ach.reward': 'Recompensa: {reward}',
+    'levelup.title': 'SUBE DE NIVEL',
+    'levelup.now': 'Lv.{from} → Lv.{to}',
+    'levelup.gained': 'Título: {title}',
+
+    'gift.usage':       'Uso: gift <objeto> to <npc>',
+    'gift.no_item':     'gift: no tienes "{item}"',
+    'gift.no_npc':      'gift: NPC desconocido "{npc}"',
+    'gift.npc_absent':  'gift: {name} no está aquí',
+    'gift.received':    '[recibido: {item}]',
+    'bookmark.usage':   'Uso: bookmark <nombre>',
+    'bookmark.bad':     'bookmark: el nombre debe tener 1-32 caracteres [a-z0-9_-]',
+    'bookmark.set':     'marcador "{name}" -> {path}',
+    'bookmarks.empty':  '  (ninguno) - prueba: bookmark home',
+    'goto.usage':       'Uso: goto <nombre-de-marcador>',
+    'goto.unknown':     'goto: no hay marcador "{name}"',
+    'goto.gone':        'goto: destino del marcador desaparecido: {path}',
+    'season.title':     'Estación',
+    'affinity.title':   'Afinidad NPC',
+    'cheatsheet.title': 'referencia rápida (?)'
   }
 };
 
@@ -350,8 +562,13 @@ function detectLocale() {
     process.env.LANG ||
     '';
   const lower = raw.toLowerCase();
+  // Order matters: zh_TW (Taiwan), zh_HK (Hong Kong) and Bopomofo region
+  // codes all use Traditional Chinese, so route them to zh-tw before the
+  // generic zh prefix. Same idea for ja_JP and es_ES / es_MX / etc.
+  if (/^zh[_\-]?(tw|hk|hant)/i.test(raw)) return 'zh-tw';
   if (lower.startsWith('zh')) return 'zh';
   if (lower.startsWith('ja')) return 'ja';
+  if (lower.startsWith('es')) return 'es';
   return 'en';
 }
 

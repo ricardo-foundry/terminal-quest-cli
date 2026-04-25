@@ -245,6 +245,91 @@ const EXTRA_ACHIEVEMENTS = {
       }
       return has.key && has.consumable && has.equipment && has.collectible;
     }
+  },
+
+  // v2.7 (iter-14) additions ----------------------------------------------
+  // Cross-locale achievement: rewards players who actually try the language
+  // switch. `localesUsed` is a Set-like array on gameState updated by
+  // `lang <code>` and by the boot-time auto-detect.
+  'polyglot': {
+    id: 'polyglot',
+    name: 'Polyglot',
+    icon: '🌐',
+    desc: 'Play with 4 different languages active',
+    reward: '120 EXP',
+    category: 'hidden',
+    unlocked: false,
+    check: (gs) => Array.isArray(gs.localesUsed) && gs.localesUsed.length >= 4
+  },
+
+  // Survive 12 consecutive night phases without dying. This game has no
+  // formal "death" mechanic; we treat any negative-alignment swing followed
+  // by a dawn reset as a "survival." The counter `nightSurvivedStreak` is
+  // bumped each time the player successfully exits the night phase without
+  // their alignment dipping below the `minAlignment` watermark.
+  'night_shift': {
+    id: 'night_shift',
+    name: 'Night Shift',
+    icon: '🌙',
+    desc: 'Survive 12 consecutive night phases unscathed',
+    reward: '200 EXP',
+    category: 'speedrun',
+    unlocked: false,
+    check: (gs) => Number(gs.nightSurvivedStreak || 0) >= 12
+  },
+
+  // Befriend the merchant — affinity >= 80 with NPC id "shop".
+  'merchant_friend': {
+    id: 'merchant_friend',
+    name: "Merchant's Friend",
+    icon: '🤝',
+    desc: 'Reach affinity >= 80 with the merchant',
+    reward: '180 EXP',
+    category: 'collection',
+    unlocked: false,
+    check: (gs) => {
+      const a = gs.npcAffinity || {};
+      return Number(a.shop || 0) >= 80;
+    }
+  },
+
+  // Quest grinder — finish 5 community quests OR built-in quests.
+  'completionist_quest': {
+    id: 'completionist_quest',
+    name: 'Quest Completionist',
+    icon: '📜',
+    desc: 'Complete 5 quests (built-in or community)',
+    reward: '250 EXP',
+    category: 'collection',
+    unlocked: false,
+    check: (gs) => {
+      const builtIn = gs.questsState
+        ? Object.values(gs.questsState).filter((q) => q && q.completed).length
+        : 0;
+      const community = Number(gs.questPackDone || 0);
+      return (builtIn + community) >= 5;
+    }
+  },
+
+  // Silent runner — finish at least one community quest without ever opening
+  // the in-game `history` panel. The flag `historyOpened` flips to true the
+  // first time a player runs `history`; the achievement only fires when a
+  // quest finishes while it is still false.
+  'silent_runner': {
+    id: 'silent_runner',
+    name: 'Silent Runner',
+    icon: '🤫',
+    desc: 'Finish a quest without ever opening `history`',
+    reward: '120 EXP',
+    category: 'speedrun',
+    unlocked: false,
+    check: (gs) => {
+      const community = Number(gs.questPackDone || 0);
+      const builtIn = gs.questsState
+        ? Object.values(gs.questsState).filter((q) => q && q.completed).length
+        : 0;
+      return (community + builtIn) >= 1 && !gs.historyOpened;
+    }
   }
 };
 

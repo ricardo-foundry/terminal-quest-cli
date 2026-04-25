@@ -80,7 +80,19 @@ const DEFAULT_STATE = {
   giftLog: [],
   specialItemsGranted: {},
   bookmarks: {},
-  seasonsSeen: []
+  seasonsSeen: [],
+  // v2.7 (iter-14) additions
+  // localesUsed: every locale the player has been active in (auto-detect
+  //   counts; explicit `lang` switches count). Drives the Polyglot achievement.
+  localesUsed: [],
+  // nightSurvivedStreak: how many consecutive night phases were exited
+  //   without alignment dipping. See evaluateNightStreak() below.
+  nightSurvivedStreak: 0,
+  lastNightTurn: -1,
+  // historyOpened: gate for the Silent Runner achievement. Flips true on
+  //   the first `history` invocation and never resets.
+  historyOpened: false,
+  playtimeMs: 0
 };
 
 class TerminalGame {
@@ -123,6 +135,15 @@ class TerminalGame {
     // apply persisted preferences
     if (this.gameState.locale) setLocale(this.gameState.locale);
     applyTheme(this.gameState.theme || 'dark');
+
+    // v2.7: track locales used (for the Polyglot achievement). The active
+    // locale at boot — whether persisted, env-detected, or default — counts.
+    if (!Array.isArray(this.gameState.localesUsed)) this.gameState.localesUsed = [];
+    const { getLocale } = require('./i18n');
+    const cur = getLocale();
+    if (cur && !this.gameState.localesUsed.includes(cur)) {
+      this.gameState.localesUsed.push(cur);
+    }
   }
 
   /**
@@ -523,6 +544,25 @@ class TerminalGame {
       }
     }
     res.newSeasons = newSeasons;
+
+    // v2.7 (iter-14): night-shift achievement support. Each time we exit
+    // a "night" phase without alignment dropping below the running min,
+    // bump nightSurvivedStreak. If a night was crossed and alignment
+    // ratchets down, reset to 0.
+    for (const p of res.newPhases) {
+      if (p.name === 'dawn') {
+        // we just exited night — reward the streak if alignment held.
+        const minAlign = Number(this.gameState.minAlignment || 0);
+        const curAlign = Number(this.gameState.alignment || 0);
+        if (curAlign >= minAlign) {
+          this.gameState.nightSurvivedStreak =
+            Number(this.gameState.nightSurvivedStreak || 0) + 1;
+        } else {
+          this.gameState.nightSurvivedStreak = 0;
+        }
+      }
+    }
+
     return res;
   }
 

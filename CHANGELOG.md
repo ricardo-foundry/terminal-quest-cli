@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-04-25
+
+### Added (v2.7 locales + leaderboard — Round 14)
+- **Two new locales** in `src/i18n.js`:
+  - `zh-tw` (Traditional Chinese) — derived from `zh` with regional
+    vocabulary (軟體 vs 软件, 啟用 vs 启用, 偵測 vs 检测, 預設 vs 默认,
+    程式 vs 程序, 資料 vs 数据, …). Full 76-key coverage.
+  - `es` (Spanish) — full hand translation, 76/76 keys covered.
+- **Smarter `detectLocale()`** that routes `LANG=zh_TW.UTF-8`,
+  `zh_HK.*`, and `zh-Hant*` to the new `zh-tw` locale before the
+  generic `zh*` prefix. `LANG=es_ES.UTF-8` (and `es_MX.*` etc.)
+  routes to `es`.
+- **5 new achievements** in `src/achievements.js`:
+  - `polyglot` — play with 4+ unique locales active.
+  - `night_shift` — survive 12 consecutive night phases.
+  - `merchant_friend` — affinity ≥ 80 with the merchant (`shop`).
+  - `completionist_quest` — finish 5 quests (built-in + community
+    combined).
+  - `silent_runner` — finish a quest without ever opening
+    `history`. Once you peek at `history`, the gate closes for
+    the rest of the save.
+- **Local leaderboard** (`src/leaderboard.js`): scans every save
+  slot in `~/.terminal-quest/saves`, builds a weighted score from
+  level / EXP / achievements / quests / locale variety / NPC
+  affinity peak, and exposes `top`, `top <n>`, `top export`, and
+  `top import <file>` commands. The export format wraps machine-
+  parseable `LBE { … }` JSON lines inside a sentinel block so it
+  survives being pasted into chat or a forum post.
+- **Markdown war-story report** (`report` command): writes
+  `~/.terminal-quest/reports/<slot>-<ts>.md` with a snapshot, the
+  unlocked achievements list, completed quests (built-in +
+  community, including branch endings), the visited-directory
+  footprint, the favourite NPC, and the inventory.
+- **CLI polish**:
+  - `--theme retro` now distinguishes `success` / `gold` from
+    `primary` (was `#FFB000` for both, making OK lines invisible
+    against the amber CRT background). Bumped to `#FFE060`.
+  - `--no-color` now also re-applies the active theme so the live
+    `colors` palette in `ui.js` (which was bound at require-time
+    before `NO_COLOR` was set) gets rebuilt with plaintext
+    decorators. Result: prompt and ANSI escapes are *both* gone
+    instead of just the body text.
+  - `applyTheme` syncs `chalk.level` with the current capability
+    detection so a late `NO_COLOR` is honoured by every existing
+    `chalk.hex(...)` palette function.
+- **23 new tests** (271 → 294+) across `i18n.test.js`,
+  `achievements.test.js`, the new `leaderboard.test.js`, and
+  `report.test.js`.
+
+### Changed
+- `DEFAULT_STATE` in `src/game.js` now carries `localesUsed`,
+  `nightSurvivedStreak`, `lastNightTurn`, `historyOpened`, and
+  `playtimeMs` so the new achievements have somewhere to live.
+- `cmdLang` records the new locale into `gameState.localesUsed`.
+- `cmdHistory` flips `gameState.historyOpened = true` once.
+- `advanceTime` bumps `nightSurvivedStreak` whenever a `dawn`
+  phase boundary is crossed without alignment dipping below the
+  running minimum.
+- `docs/I18N_COVERAGE.md` documents the new locales and the
+  detection priority (zh-tw checked before zh).
+- `package.json` bumped to **2.7.0**, no new runtime deps (still
+  `chalk`, `figlet`, `keypress`).
+
 ## [2.6.0] - 2026-04-25
 
 ### Added (v2.6 content depth — Round 12 + Round 13)
