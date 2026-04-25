@@ -44,7 +44,7 @@
   <!-- bottom stripe -->
   <rect x="80" y="490" width="1040" height="60" rx="0" fill="#101a2e"/>
   <text x="100" y="528" fill="#FFB000" font-size="22" font-weight="700">$ npx terminal-quest-cli</text>
-  <text x="1100" y="528" text-anchor="end" fill="#7a8aa6" font-size="16">github.com/Ricardo-M-L/terminal-quest-cli</text>
+  <text x="1100" y="528" text-anchor="end" fill="#7a8aa6" font-size="16">github.com/ricardo-foundry/terminal-quest-cli</text>
 
   <!-- footer -->
   <text x="600" y="600" text-anchor="middle" fill="#445575" font-size="14">MIT · Node ≥ 14 · macOS · Linux · Windows</text>

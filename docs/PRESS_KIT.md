@@ -47,5 +47,5 @@ account, no nonsense.  `npx terminal-quest-cli`.
 
 ## Contact
 
-Issues: https://github.com/Ricardo-M-L/terminal-quest-cli/issues
+Issues: https://github.com/ricardo-foundry/terminal-quest-cli/issues
 Author: KIMI-AI team

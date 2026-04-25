@@ -18,7 +18,7 @@ const path = require('path');
 const os = require('os');
 
 const SHARES_DIR = path.join(os.homedir(), '.terminal-quest', 'shares');
-const REPO_URL = 'https://github.com/Ricardo-M-L/terminal-quest-cli';
+const REPO_URL = 'https://github.com/ricardo-foundry/terminal-quest-cli';
 
 function ensureDir() {
   if (!fs.existsSync(SHARES_DIR)) {

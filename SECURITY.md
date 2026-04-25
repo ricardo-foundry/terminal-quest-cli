@@ -16,7 +16,7 @@ filing a report against an older version.
 
 Instead, use one of the following private channels:
 
-1. Open a [GitHub security advisory](https://github.com/Ricardo-M-L/terminal-quest-cli/security/advisories/new)
+1. Open a [GitHub security advisory](https://github.com/ricardo-foundry/terminal-quest-cli/security/advisories/new)
    (preferred). This creates a private conversation visible only to maintainers.
 2. If you cannot use GitHub advisories, email the maintainers via the address
    listed in `package.json`.

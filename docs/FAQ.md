@@ -69,7 +69,7 @@ conductor — all of whom remember how you treat them.
 ## 10. Something broke — what now?
 
 Please open an issue at
-https://github.com/Ricardo-M-L/terminal-quest-cli/issues with:
+https://github.com/ricardo-foundry/terminal-quest-cli/issues with:
 
 - your Node version (`node --version`)
 - your OS and terminal

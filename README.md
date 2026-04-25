@@ -15,7 +15,7 @@
 [![npm version](https://img.shields.io/npm/v/terminal-quest-cli.svg?color=cb3837&logo=npm)](https://www.npmjs.com/package/terminal-quest-cli)
 [![npm downloads](https://img.shields.io/npm/dm/terminal-quest-cli.svg?color=cb3837&logo=npm)](https://www.npmjs.com/package/terminal-quest-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![CI](https://github.com/Ricardo-M-L/terminal-quest-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/Ricardo-M-L/terminal-quest-cli/actions/workflows/ci.yml)
+[![CI](https://github.com/ricardo-foundry/terminal-quest-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/ricardo-foundry/terminal-quest-cli/actions/workflows/ci.yml)
 [![Node >= 14](https://img.shields.io/badge/node-%3E%3D14-43853d?logo=node.js&logoColor=white)](https://nodejs.org)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-blue)](#cross-platform-notes)
 [![Bundle size](https://img.shields.io/badge/install%20size-~180%20kB-informational)](https://packagephobia.com/result?p=terminal-quest-cli)
@@ -155,7 +155,7 @@ npm install -g terminal-quest-cli
 terminal-quest                 # or: tq / adventure
 
 # Hack on the source
-git clone https://github.com/Ricardo-M-L/terminal-quest-cli.git
+git clone https://github.com/ricardo-foundry/terminal-quest-cli.git
 cd terminal-quest-cli
 npm install && npm test
 npm start
@@ -291,7 +291,7 @@ For maintainers cutting a release: [`docs/RELEASING.md`](./docs/RELEASING.md).
 
 ## Stars over time
 
-[![Stargazers over time](https://starchart.cc/Ricardo-M-L/terminal-quest-cli.svg?variant=adaptive)](https://starchart.cc/Ricardo-M-L/terminal-quest-cli)
+[![Stargazers over time](https://starchart.cc/ricardo-foundry/terminal-quest-cli.svg?variant=adaptive)](https://starchart.cc/ricardo-foundry/terminal-quest-cli)
 
 ---
 
@@ -314,7 +314,7 @@ npm install -g terminal-quest-cli
 terminal-quest      # 或 tq / adventure
 
 # 源码
-git clone https://github.com/Ricardo-M-L/terminal-quest-cli.git
+git clone https://github.com/ricardo-foundry/terminal-quest-cli.git
 cd terminal-quest-cli && npm install && npm start
 ```
 

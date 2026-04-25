@@ -10,7 +10,7 @@ Terminal Quest is that, minus the .exe.  `npx terminal-quest-cli` and
 you are inside a tiny retro world: ls, cd, cat, solve, sneak into
 /shadow/realm.  MIT, 0 analytics, bilingual.
 
-https://github.com/Ricardo-M-L/terminal-quest-cli
+https://github.com/ricardo-foundry/terminal-quest-cli
 
 ## 2. Zero install
 

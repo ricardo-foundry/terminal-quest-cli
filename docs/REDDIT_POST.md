@@ -39,7 +39,7 @@ What is in it:
 
 Feedback, PRs, or roasts of my prompt design all welcome.
 
-Repo: https://github.com/Ricardo-M-L/terminal-quest-cli
+Repo: https://github.com/ricardo-foundry/terminal-quest-cli
 
 ---
 
@@ -65,7 +65,7 @@ feel like a real playthrough:
 If you love Zork, Dwarf Fortress's story mode, or `roguebasin` in
 general, you might like this.
 
-Repo: https://github.com/Ricardo-M-L/terminal-quest-cli
+Repo: https://github.com/ricardo-foundry/terminal-quest-cli
 
 ---
 
@@ -95,4 +95,4 @@ A few things I learned:
   v2.4 ships a GitHub-Gist backend behind `--cloud push/pull/list`
   and an abstract `CloudBackend` class for other implementations.
 
-Repo + full write-up: https://github.com/Ricardo-M-L/terminal-quest-cli
+Repo + full write-up: https://github.com/ricardo-foundry/terminal-quest-cli

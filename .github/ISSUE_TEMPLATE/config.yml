@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Discussions
-    url: https://github.com/Ricardo-M-L/terminal-quest-cli/discussions
+    url: https://github.com/ricardo-foundry/terminal-quest-cli/discussions
     about: Ask questions, share save files, or show off your custom themes.
   - name: Security advisory
-    url: https://github.com/Ricardo-M-L/terminal-quest-cli/security/advisories/new
+    url: https://github.com/ricardo-foundry/terminal-quest-cli/security/advisories/new
     about: Please report security vulnerabilities privately instead of opening a public issue.
